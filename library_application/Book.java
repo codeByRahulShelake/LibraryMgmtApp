@@ -382,5 +382,167 @@ public class Book
             }
         }
     }
+    
+    // list all available books
+    public static void listAvailableBooks() {
+        try {
+            // Establish the connection to the database
+            connection = DriverManager.getConnection(URL, USER, PASSWORD);
+
+            // Prepare the SQL query to find books that have at least one available copy
+            String searchSQL = "SELECT b.book_id, b.title, b.author, b.genre, b.total_copies " +
+                               "FROM books b JOIN copies c ON b.book_id = c.book_id " +
+                               "WHERE c.availability_status = 'available' " +
+                               "GROUP BY b.book_id " +
+                               "HAVING COUNT(c.availability_status) > 0";
+
+            PreparedStatement statement = connection.prepareStatement(searchSQL);
+
+            // Execute the query and get the result set
+            ResultSet resultSet = statement.executeQuery();
+
+            // Check if any results were returned
+            if (!resultSet.isBeforeFirst()) {
+                System.out.println("No available books found.");
+                return;
+            }
+
+            // Print table headers
+            System.out.println();
+            System.out.printf("%-10s %-30s %-20s %-15s %-15s%n", "Book ID", "Title", "Author", "Genre", "Total Copies");
+            System.out.println("------------------------------------------------------------------------------------------");
+
+            // Display each matching book in a table format
+            while (resultSet.next()) {
+                int bookId = resultSet.getInt("book_id");
+                String title = resultSet.getString("title");
+                if (title.length() > 30) {
+                    title = title.substring(0, 30);  // Limit to 30 characters
+                }
+                String author = resultSet.getString("author");
+                if (author.length() > 20) {
+                    author = author.substring(0, 20);  // Limit to 20 characters
+                }
+                String genre = resultSet.getString("genre");
+                if (genre.length() > 15) {
+                    genre = genre.substring(0, 15);  // Limit to 15 characters
+                }
+                int totalCopies = resultSet.getInt("total_copies");
+
+                System.out.printf("%-10d %-30s %-20s %-15s %-15d%n", bookId, title, author, genre, totalCopies);
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        } finally {
+            try {
+                if (connection != null) {
+                    connection.close(); // Close the connection
+                }
+            } catch (SQLException e) {
+                e.printStackTrace();
+            }
+        }
+    }
+    
+    // add copies to existing book
+    public static void addCopy(int bookId, int numberOfCopies) {
+        try {
+            // Establish the connection to the database
+            connection = DriverManager.getConnection(URL, USER, PASSWORD);
+
+            // Prepare SQL for inserting copies
+            String insertCopySQL = "INSERT INTO copies (book_id, availability_status) VALUES (?, ?)";
+            PreparedStatement copyStatement = connection.prepareStatement(insertCopySQL);
+
+            // Add the specified number of copies
+            for (int i = 0; i < numberOfCopies; i++) {
+                copyStatement.setInt(1, bookId); // Set the book_id for each copy
+                copyStatement.setString(2, "available"); // Set initial availability status to 'available'
+                copyStatement.addBatch();
+            }
+
+            // Execute the batch insert
+            copyStatement.executeBatch();
+            System.out.println(numberOfCopies + " copies added successfully for Book ID: " + bookId);
+
+        } catch (SQLException e) {
+            e.printStackTrace();
+        } finally {
+            try {
+                if (connection != null) {
+                    connection.close(); // Close the connection
+                }
+            } catch (SQLException e) {
+                e.printStackTrace();
+            }
+        }
+    }
+
+    // delete copy by its id
+    public static void deleteCopy(int copyId) {
+        try {
+            // Establish the connection to the database
+            connection = DriverManager.getConnection(URL, USER, PASSWORD);
+
+            // Prepare SQL to delete a specific copy
+            String deleteCopySQL = "DELETE FROM copies WHERE copy_id = ?";
+            PreparedStatement deleteStatement = connection.prepareStatement(deleteCopySQL);
+            deleteStatement.setInt(1, copyId); // Set the copy_id of the copy to be deleted
+
+            int rowsAffected = deleteStatement.executeUpdate();
+            if (rowsAffected > 0) {
+                System.out.println("Copy with Copy ID: " + copyId + " deleted successfully.");
+            } else {
+                System.out.println("No copy found with Copy ID: " + copyId);
+            }
+
+        } catch (SQLException e) {
+            e.printStackTrace();
+        } finally {
+            try {
+                if (connection != null) {
+                    connection.close(); // Close the connection
+                }
+            } catch (SQLException e) {
+                e.printStackTrace();
+            }
+        }
+    }
+
+    
+    //update copy status
+    public static void updateCopyStatus(int copyId, String status) {
+        try {
+            // Establish the connection to the database
+            connection = DriverManager.getConnection(URL, USER, PASSWORD);
+
+            // Prepare the SQL statement to update the copy's status
+            String updateStatusSQL = "UPDATE copies SET availability_status = ? WHERE copy_id = ?";
+            PreparedStatement updateStatement = connection.prepareStatement(updateStatusSQL);
+            updateStatement.setString(1, status); // Set the new status (e.g., "available", "borrowed")
+            updateStatement.setInt(2, copyId);    // Set the specific copy_id to update
+
+            // Execute the update
+            int rowsAffected = updateStatement.executeUpdate();
+            if (rowsAffected > 0) {
+                System.out.println("Copy with Copy ID: " + copyId + " status updated to: " + status);
+            } else {
+                System.out.println("No copy found with Copy ID: " + copyId);
+            }
+
+        } catch (SQLException e) {
+            e.printStackTrace();
+        } finally {
+            try {
+                if (connection != null) {
+                    connection.close(); // Close the connection
+                }
+            } catch (SQLException e) {
+                e.printStackTrace();
+            }
+        }
+    }
+
+
 
 }
