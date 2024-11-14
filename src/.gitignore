@@ -1,0 +1,17 @@
+# Ignore Eclipse project files
+.project
+.settings/
+.classpath
+
+# Ignore VS Code settings files
+.vscode/
+
+# Ignore temporary, log, and backup files
+*.tmp
+*.log
+*.bak
+*.swp
+*.swo
+
+# Ignore compiled Java files
+*.class
