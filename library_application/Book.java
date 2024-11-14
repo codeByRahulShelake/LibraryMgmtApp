@@ -269,4 +269,118 @@ public class Book
         }
     }
     
+    //search book by title
+    public static void searchBookByTitle(String searchTitle) {
+        try {
+            // Establish the connection to the database
+            connection = DriverManager.getConnection(URL, USER, PASSWORD);
+
+            // Prepare the SQL query with a wildcard search
+            String searchSQL = "SELECT * FROM books WHERE title LIKE ?";
+            PreparedStatement statement = connection.prepareStatement(searchSQL);
+            statement.setString(1, "%" + searchTitle + "%");  // Using wildcard for partial match
+
+            // Execute the query and get the result set
+            ResultSet resultSet = statement.executeQuery();
+
+            // Check if any results were returned
+            if (!resultSet.isBeforeFirst()) {
+                System.out.println("No books found with title containing: " + searchTitle);
+                return;
+            }
+
+            // Print table headers
+            System.out.println();
+            System.out.printf("%-10s %-30s %-20s %-15s %-15s%n", "Book ID", "Title", "Author", "Genre", "Total Copies");
+            System.out.println("------------------------------------------------------------------------------------------");
+
+            // Display each matching book in a table format
+            while (resultSet.next()) {
+                int bookId = resultSet.getInt("book_id");
+                String title = resultSet.getString("title");
+                if (title.length() > 30) {
+                    title = title.substring(0, 30);  // Limit to 30 characters
+                }
+                String author = resultSet.getString("author");
+                if (author.length() > 20) {
+                    author = author.substring(0, 20);  // Limit to 20 characters
+                }
+                String genre = resultSet.getString("genre");
+                if (genre.length() > 15) {
+                    genre = genre.substring(0, 15);  // Limit to 15 characters
+                }
+                int totalCopies = resultSet.getInt("total_copies");
+
+                System.out.printf("%-10d %-30s %-20s %-15s %-15d%n", bookId, title, author, genre, totalCopies);
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        } finally {
+            try {
+                if (connection != null) {
+                    connection.close(); // Close the connection
+                }
+            } catch (SQLException e) {
+                e.printStackTrace();
+            }
+        }
+    }
+    
+    // search by author
+    public static void searchBookByAuthor(String searchAuthor) {
+        try {
+            // Establish the connection to the database
+            connection = DriverManager.getConnection(URL, USER, PASSWORD);
+
+            // Prepare the SQL query with a wildcard search
+            String searchSQL = "SELECT * FROM books WHERE author LIKE ?";
+            PreparedStatement statement = connection.prepareStatement(searchSQL);
+            statement.setString(1, "%" + searchAuthor + "%");  // Using wildcard for partial match
+
+            // Execute the query and get the result set
+            ResultSet resultSet = statement.executeQuery();
+
+            // Check if any results were returned
+            if (!resultSet.isBeforeFirst()) {
+                System.out.println("No books found with author containing: " + searchAuthor);
+                return;
+            }
+
+            // Print table headers
+            System.out.println();
+            System.out.printf("%-10s %-30s %-20s %-15s %-15s%n", "Book ID", "Title", "Author", "Genre", "Total Copies");
+            System.out.println("------------------------------------------------------------------------------------------");
+
+            // Display each matching book in a table format
+            while (resultSet.next()) {
+                int bookId = resultSet.getInt("book_id");
+                String title = resultSet.getString("title");
+                if (title.length() > 30) {
+                    title = title.substring(0, 30);  // Limit to 30 characters
+                }
+                String author = resultSet.getString("author");
+                if (author.length() > 20) {
+                    author = author.substring(0, 20);  // Limit to 20 characters
+                }
+                String genre = resultSet.getString("genre");
+                if (genre.length() > 15) {
+                    genre = genre.substring(0, 15);  // Limit to 15 characters
+                }
+                int totalCopies = resultSet.getInt("total_copies");
+
+                System.out.printf("%-10d %-30s %-20s %-15s %-15d%n", bookId, title, author, genre, totalCopies);
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        } finally {
+            try {
+                if (connection != null) {
+                    connection.close(); // Close the connection
+                }
+            } catch (SQLException e) {
+                e.printStackTrace();
+            }
+        }
+    }
+
 }
