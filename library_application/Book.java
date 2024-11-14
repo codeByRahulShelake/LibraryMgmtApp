@@ -182,5 +182,91 @@ public class Book
             }
         }
     }
+    
+    // Method to select and display all books from the database
+    public static void displayAllBooks() {
+        try {
+            connection = DriverManager.getConnection(URL, USER, PASSWORD);
 
+            String selectBooksSQL = "SELECT * FROM Books";
+            PreparedStatement statement = connection.prepareStatement(selectBooksSQL);
+
+            ResultSet resultSet = statement.executeQuery();
+
+                // Display table header
+            	System.out.println();
+                System.out.printf("%-10s %-30s %-20s %-15s %-15s%n", "Book ID", "Title", "Author", "Genre", "Total Copies");
+                System.out.println("--------------------------------------------------------------------------------------------");
+
+                // Display each book in table format
+                while (resultSet.next()) {
+                    int bookId = resultSet.getInt("book_id");
+                    String title = resultSet.getString("title");
+                    if (title.length() > 30) {
+                        title = title.substring(0, 30);  // Limit to 30 characters
+                    }
+                    String author = resultSet.getString("author");
+                    if (author.length() > 20) {
+                        author = author.substring(0, 20);  // Limit to 20 characters
+                    }
+                    String genre = resultSet.getString("genre");
+                    if (genre.length() > 15) {
+                        genre = genre.substring(0, 15);  // Limit to 15 characters
+                    }
+                    int totalCopies = resultSet.getInt("total_copies");
+
+                    System.out.printf("%-10d %-30s %-20s %-15s %-15d%n", bookId, title, author, genre, totalCopies);
+                }
+            
+
+        } catch (SQLException e) {
+            e.printStackTrace();
+        } finally {
+            try {
+                if (connection != null) {
+                    connection.close();
+                }
+            } catch (SQLException e) {
+                e.printStackTrace();
+            }
+        }
+    }
+    
+    public static void displayCopiesInfo(int book_id) {
+        try {
+            connection = DriverManager.getConnection(URL, USER, PASSWORD);
+
+            String selectBooksSQL = "SELECT copy_id, availability_status FROM copies where book_id = ?";
+            PreparedStatement statement = connection.prepareStatement(selectBooksSQL);
+            statement.setInt(1, book_id);
+
+            ResultSet resultSet = statement.executeQuery();
+
+            	System.out.println();
+                // Display table header
+                System.out.printf("%-10s %-20s%n", "Copy ID", "Status");
+                System.out.println("-----------------------");
+
+                // Display each book in table format
+                while (resultSet.next()) {
+                    int copyId = resultSet.getInt("copy_id");
+                    String status = resultSet.getString("availability_status");
+
+                    System.out.printf("%-10d %-20s%n", copyId, status);
+                }
+            
+
+        } catch (SQLException e) {
+            e.printStackTrace();
+        } finally {
+            try {
+                if (connection != null) {
+                    connection.close();
+                }
+            } catch (SQLException e) {
+                e.printStackTrace();
+            }
+        }
+    }
+    
 }
