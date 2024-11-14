@@ -601,6 +601,204 @@ public class Book
         }
     }
 
+    //update book title
+    public static void updateBookTitle(int bookId, String newTitle) {
+        try {
+            // Establish the connection to the database
+            connection = DriverManager.getConnection(URL, USER, PASSWORD);
+
+            // SQL query to update the title
+            String updateTitleSQL = "UPDATE books SET title = ? WHERE book_id = ?";
+            PreparedStatement statement = connection.prepareStatement(updateTitleSQL);
+            statement.setString(1, newTitle);
+            statement.setInt(2, bookId);
+
+            // Execute the update
+            int rowsAffected = statement.executeUpdate();
+            if (rowsAffected > 0) {
+                System.out.println("Title updated successfully!");
+            } else {
+                System.out.println("No book found with ID: " + bookId);
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        } finally {
+            try {
+                if (connection != null) {
+                    connection.close(); // Close the connection
+                }
+            } catch (SQLException e) {
+                e.printStackTrace();
+            }
+        }
+    }
+
+    //update book author
+    public static void updateBookAuthor(int bookId, String newAuthor) {
+        try {
+            // Establish the connection to the database
+            connection = DriverManager.getConnection(URL, USER, PASSWORD);
+
+            // SQL query to update the author
+            String updateAuthorSQL = "UPDATE books SET author = ? WHERE book_id = ?";
+            PreparedStatement statement = connection.prepareStatement(updateAuthorSQL);
+            statement.setString(1, newAuthor);
+            statement.setInt(2, bookId);
+
+            // Execute the update
+            int rowsAffected = statement.executeUpdate();
+            if (rowsAffected > 0) {
+                System.out.println("Author updated successfully!");
+            } else {
+                System.out.println("No book found with ID: " + bookId);
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        } finally {
+            try {
+                if (connection != null) {
+                    connection.close(); // Close the connection
+                }
+            } catch (SQLException e) {
+                e.printStackTrace();
+            }
+        }
+    }
+
+    //update book genre
+    public static void updateBookGenre(int bookId, String newGenre) {
+        try {
+            // Establish the connection to the database
+            connection = DriverManager.getConnection(URL, USER, PASSWORD);
+
+            // SQL query to update the genre
+            String updateGenreSQL = "UPDATE books SET genre = ? WHERE book_id = ?";
+            PreparedStatement statement = connection.prepareStatement(updateGenreSQL);
+            statement.setString(1, newGenre);
+            statement.setInt(2, bookId);
+
+            // Execute the update
+            int rowsAffected = statement.executeUpdate();
+            if (rowsAffected > 0) {
+                System.out.println("Genre updated successfully!");
+            } else {
+                System.out.println("No book found with ID: " + bookId);
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        } finally {
+            try {
+                if (connection != null) {
+                    connection.close(); // Close the connection
+                }
+            } catch (SQLException e) {
+                e.printStackTrace();
+            }
+        }
+    }
+    
+ // Method to add a new member 
+    public static void addMember(String name, String email, String phone, String address, String password) {
+        PreparedStatement statement = null;
+        ResultSet resultSet = null;
+
+        try {
+            // Establish the connection to the database
+            connection = DriverManager.getConnection(URL, USER, PASSWORD);
+
+            // First, check if the email already exists in the database
+            String checkEmailSQL = "SELECT email FROM members WHERE email = ?";
+            statement = connection.prepareStatement(checkEmailSQL);
+            statement.setString(1, email);
+            resultSet = statement.executeQuery();
+
+            // If the email already exists, return an error message and exit
+            if (resultSet.next()) {
+                System.out.println("Member with this email already exists. Try with different email id");
+                return;  // Return early to prevent adding the member
+            }
+
+            // SQL query to insert the new member into the members table
+            String insertSQL = "INSERT INTO members (name, email, phone, address, password) VALUES (?, ?, ?, ?, ?)";
+            statement = connection.prepareStatement(insertSQL, Statement.RETURN_GENERATED_KEYS);
+            statement.setString(1, name);
+            statement.setString(2, email);
+            statement.setString(3, phone);
+            statement.setString(4, address);
+            statement.setString(5, password);
+
+            // Execute the insertion
+            int rowsAffected = statement.executeUpdate();
+
+            if (rowsAffected > 0) {
+                // Get the generated member_id
+                resultSet = statement.getGeneratedKeys();
+                if (resultSet.next()) {
+                    int memberId = resultSet.getInt(1);
+                    System.out.println("Member added successfully! Member ID: " + memberId);
+                }
+            } else {
+                System.out.println("Error: Failed to add the member.");
+            }
+
+        } catch (SQLException e) {
+            e.printStackTrace();
+        } finally {
+            // Close the resources in the finally block to ensure they are always closed
+            try {
+                if (resultSet != null) {
+                    resultSet.close(); // Close the ResultSet
+                }
+                if (statement != null) {
+                    statement.close(); // Close the PreparedStatement
+                }
+                if (connection != null) {
+                    connection.close(); // Close the Connection
+                }
+            } catch (SQLException e) {
+                e.printStackTrace();
+            }
+        }
+    }
+    
+    // Method to delete a member by member_id
+    public static void deleteMember(int memberId) {
+        PreparedStatement statement = null;
+
+        try {
+            // Establish the connection to the database
+            connection = DriverManager.getConnection(URL, USER, PASSWORD);
+
+            // SQL query to delete a member by member_id
+            String deleteSQL = "DELETE FROM members WHERE member_id = ?";
+            statement = connection.prepareStatement(deleteSQL);
+            statement.setInt(1, memberId);  // Set the member_id to the given value
+
+            // Execute the delete operation
+            int rowsAffected = statement.executeUpdate();
+
+            if (rowsAffected > 0) {
+                System.out.println("Member with ID " + memberId + " deleted successfully.");
+            } else {
+                System.out.println("No member found with ID " + memberId + ".");
+            }
+
+        } catch (SQLException e) {
+            e.printStackTrace();
+        } finally {
+            // Close the resources in the finally block to ensure they are always closed
+            try {
+                if (statement != null) {
+                    statement.close(); // Close the PreparedStatement
+                }
+                if (connection != null) {
+                    connection.close(); // Close the Connection
+                }
+            } catch (SQLException e) {
+                e.printStackTrace();
+            }
+        }
+    }
 
 
 }
