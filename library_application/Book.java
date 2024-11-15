@@ -1,6 +1,7 @@
 package library_application;
 
 import java.sql.*;
+import java.util.*;
 
 public class Book 
 {  // Changed class name from LibraryDatabase to Book
@@ -12,11 +13,11 @@ public class Book
 
     // JDBC variables for opening, closing, and managing the connection
     private static Connection connection;
-
+    
+   static Scanner sc = new Scanner(System.in);
     
     // method to add new book in database
     public static void addBookData(String title, String author, String genre, int totalCopies) {
-        Connection connection = null;
         try {
             // Establish the connection to the database
             connection = DriverManager.getConnection(URL, USER, PASSWORD);
@@ -125,7 +126,7 @@ public class Book
         }
     }
 
-    
+    // delete book method
     public void deleteBook(int book_id, String title) {
         Connection connection = null;
         try {
@@ -198,8 +199,10 @@ public class Book
                 System.out.printf("%-10s %-30s %-20s %-15s %-15s%n", "Book ID", "Title", "Author", "Genre", "Total Copies");
                 System.out.println("--------------------------------------------------------------------------------------------");
 
+                int recordCount = 0; // count to display record in set
                 // Display each book in table format
                 while (resultSet.next()) {
+                	recordCount++;
                     int bookId = resultSet.getInt("book_id");
                     String title = resultSet.getString("title");
                     if (title.length() > 30) {
@@ -216,8 +219,23 @@ public class Book
                     int totalCopies = resultSet.getInt("total_copies");
 
                     System.out.printf("%-10d %-30s %-20s %-15s %-15d%n", bookId, title, author, genre, totalCopies);
-                }
-            
+                 
+                    // Check if 10 records have been displayed and there are more records left
+                    if (recordCount == 10 && !resultSet.isLast()) {
+                    		System.out.println();
+                        	System.out.println("Enter 'next' If you want to see next set of books or enter anything to exit");
+                        	String choice = sc.nextLine();
+                        	if(choice.equalsIgnoreCase("next"))
+                        	{
+                        		recordCount = 0;
+                        	}
+                        	else
+                        	{
+                        		break;
+                        	}
+                        }
+                    } 
+                
 
         } catch (SQLException e) {
             e.printStackTrace();
@@ -241,18 +259,34 @@ public class Book
             statement.setInt(1, book_id);
 
             ResultSet resultSet = statement.executeQuery();
-
             	System.out.println();
                 // Display table header
                 System.out.printf("%-10s %-20s%n", "Copy ID", "Status");
                 System.out.println("-----------------------");
 
+                int recordCount = 0; // record to display set of books
                 // Display each book in table format
                 while (resultSet.next()) {
+                	recordCount ++;
                     int copyId = resultSet.getInt("copy_id");
                     String status = resultSet.getString("availability_status");
 
                     System.out.printf("%-10d %-20s%n", copyId, status);
+                    
+                 // Check if 10 records have been displayed and there are more records left
+                    if (recordCount == 10 && !resultSet.isLast()) {
+                    	System.out.println();
+                        	System.out.println("Enter 'next' If you want to see next set of books or enter anything to exit");
+                        	String choice = sc.nextLine();
+                        	if(choice.equalsIgnoreCase("next"))
+                        	{
+                        		recordCount = 0;
+                        	}
+                        	else
+                        	{
+                        		break;
+                        	}
+                        }
                 }
             
 
