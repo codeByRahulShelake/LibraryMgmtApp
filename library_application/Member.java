@@ -366,7 +366,6 @@ public class Member {
 
    // return book
     public static void returnBook(int copyId, int memberId) {
-        Connection connection = null;
         PreparedStatement returnStatement = null;
         PreparedStatement historyStatement = null;
         ResultSet resultSet = null;
@@ -375,7 +374,7 @@ public class Member {
             connection = DriverManager.getConnection(URL, USER, PASSWORD);
             connection.setAutoCommit(false);  // Start transaction
 
-            // Step 1: Update the availability status of the copy
+            //Update the availability status of the copy
             String returnSql = "UPDATE copies SET availability_status = 'available' WHERE copy_id = ?";
             returnStatement = connection.prepareStatement(returnSql);
             returnStatement.setInt(1, copyId);
@@ -386,7 +385,7 @@ public class Member {
                 return;
             }
 
-            // Step 2: Get the expected return date from loanhistory
+            //Get the expected return date from loanhistory
             String fetchLoanHistorySql = "SELECT expected_return_date FROM loanhistory WHERE copy_id = ? AND member_id = ? AND status = 'borrowed'";
             PreparedStatement fetchStatement = connection.prepareStatement(fetchLoanHistorySql);
             fetchStatement.setInt(1, copyId);
@@ -399,7 +398,7 @@ public class Member {
             }
             Date expectedReturnDate = resultSet.getDate("expected_return_date");
 
-            // Step 3: Calculate fine if return is late
+            //Calculate fine if return is late
             LocalDate returnDate = LocalDate.now();
             long daysLate = ChronoUnit.DAYS.between(expectedReturnDate.toLocalDate(), returnDate);
             if (daysLate > 0) {
@@ -407,7 +406,7 @@ public class Member {
                 System.out.println("Book returned late by " + daysLate + " days. Fine: Rs " + fine);
             }
 
-            // Step 4: Insert into loanhistory with updated status and return date
+            // nsert into loanhistory with updated status and return date
             String insertHistory = "UPDATE loanhistory SET return_date = ?, status = 'returned' WHERE copy_id = ? AND member_id = ? AND status = 'borrowed'";
             historyStatement = connection.prepareStatement(insertHistory);
             historyStatement.setDate(1, Date.valueOf(returnDate));
@@ -439,6 +438,253 @@ public class Member {
             }
         }
     }
+    
+    // renew book
+    public static void renewBook(int copyId, int memberId) {
+    
+        PreparedStatement fetchStatement = null;
+        PreparedStatement renewStatement = null;
+        ResultSet resultSet = null;
 
+        try {
+            connection = DriverManager.getConnection(URL, USER, PASSWORD);
+            connection.setAutoCommit(false); // Start transaction
 
+            //Get the current expected return date
+            String fetchLoanHistorySql = "SELECT expected_return_date FROM loanhistory WHERE copy_id = ? AND member_id = ? AND status = 'borrowed'";
+            fetchStatement = connection.prepareStatement(fetchLoanHistorySql);
+            fetchStatement.setInt(1, copyId);
+            fetchStatement.setInt(2, memberId);
+
+            resultSet = fetchStatement.executeQuery();
+
+            if (!resultSet.next()) {
+                System.out.println("No loan record found for Copy ID: " + copyId + " and Member ID: " + memberId);
+                return;
+            }
+
+            Date expectedReturnDate = resultSet.getDate("expected_return_date");
+            LocalDate expectedReturnLocalDate = expectedReturnDate.toLocalDate();
+            LocalDate today = LocalDate.now();
+
+            // Check if the book is overdue
+            if (today.isAfter(expectedReturnLocalDate)) {
+                long daysLate = ChronoUnit.DAYS.between(expectedReturnLocalDate, today);
+                int fine = (int) (10 * daysLate); // Rs. 10 fine per day
+                System.out.println("Renewal delayed by " + daysLate + " days. Fine: Rs " + fine);
+            }
+
+            // Calculate the new expected return date
+            LocalDate newExpectedReturnDate = today.plusDays(7);
+
+            // Update the expected return date in loanhistory
+            String updateLoanHistorySql = "UPDATE loanhistory SET expected_return_date = ? WHERE copy_id = ? AND member_id = ? AND status = 'borrowed'";
+            renewStatement = connection.prepareStatement(updateLoanHistorySql);
+            renewStatement.setDate(1, Date.valueOf(newExpectedReturnDate));
+            renewStatement.setInt(2, copyId);
+            renewStatement.setInt(3, memberId);
+
+            int updateCount = renewStatement.executeUpdate();
+
+            if (updateCount > 0) {
+                connection.commit(); // Commit the transaction
+                System.out.println("Book successfully renewed for Copy ID: " + copyId + ". New Expected Return Date: " + newExpectedReturnDate);
+            } else {
+                System.out.println("Failed to renew the book. Please check the loan record.");
+            }
+
+        } catch (SQLException e) {
+            e.printStackTrace();
+            try {
+                if (connection != null) {
+                    connection.rollback(); // Rollback the transaction in case of an error
+                }
+            } catch (SQLException ex) {
+                ex.printStackTrace();
+            }
+        } finally {
+            // Close resources
+            try {
+                if (resultSet != null) resultSet.close();
+                if (fetchStatement != null) fetchStatement.close();
+                if (renewStatement != null) renewStatement.close();
+                if (connection != null) connection.close();
+            } catch (SQLException e) {
+                e.printStackTrace();
+            }
+        }
+    }
+
+    // update name
+    public static void updateName(int memberId, String newName)
+    {
+    	PreparedStatement updateNameStatement = null;
+    	try {
+    		connection = DriverManager.getConnection(URL, USER, PASSWORD);
+    		
+    		//write sql query to update name
+    		String updateNameSql = "UPDATE MEMBERS SET name = ? WHERE member_id = ?";
+    		updateNameStatement = connection.prepareStatement(updateNameSql);
+    		updateNameStatement.setString(1, newName);
+    		updateNameStatement.setInt(2, memberId);
+    		
+    		int updateCount = updateNameStatement.executeUpdate();
+    		
+    		if(updateCount > 0){
+    			System.out.println("Name updated succefully.");
+    		}
+    		else {
+    			System.out.println("No member found to update the name.");
+    		}
+    		
+    	}catch (SQLException e) {
+            e.printStackTrace();
+        } finally {
+            // Close resources
+            try {
+                if (updateNameStatement != null) updateNameStatement.close();
+                if (connection != null) connection.close();
+            } catch (SQLException e) {
+                e.printStackTrace();
+            }
+        }
+    }
+    
+    // update email
+    public static void updateEmail(int memberId, String newEmail)
+    {
+    	PreparedStatement updateEmailStatement = null;
+    	try {
+    		connection = DriverManager.getConnection(URL, USER, PASSWORD);
+    		
+    		//write sql query to update email
+    		String updateEmailSql = "UPDATE MEMBERS SET email = ? WHERE member_id = ?";
+    		updateEmailStatement = connection.prepareStatement(updateEmailSql);
+    		updateEmailStatement.setString(1, newEmail);
+    		updateEmailStatement.setInt(2, memberId);
+    		
+    		int updateCount = updateEmailStatement.executeUpdate();
+    		
+    		if(updateCount > 0){
+    			System.out.println("Email updated succefully.");
+    		}
+    		else {
+    			System.out.println("No member found to update the email.");
+    		}
+    		
+    	}catch (SQLException e) {
+            e.printStackTrace();
+        } finally {
+            // Close resources
+            try {
+                if (updateEmailStatement != null) updateEmailStatement.close();
+                if (connection != null) connection.close();
+            } catch (SQLException e) {
+                e.printStackTrace();
+            }
+        }
+    }
+    
+    // update phone
+    public static void updatePhone(int memberId, String newPhone)
+    {
+    	PreparedStatement updatePhoneStatement = null;
+    	try {
+    		connection = DriverManager.getConnection(URL, USER, PASSWORD);
+    		
+    		//write sql query to update phone
+    		String updatePhoneSql = "UPDATE MEMBERS SET phone = ? WHERE member_id = ?";
+    		updatePhoneStatement = connection.prepareStatement(updatePhoneSql);
+    		updatePhoneStatement.setString(1, newPhone);
+    		updatePhoneStatement.setInt(2, memberId);
+    		
+    		int updateCount = updatePhoneStatement.executeUpdate();
+    		
+    		if(updateCount > 0){
+    			System.out.println("Phone no updated succefully.");
+    		}
+    		else {
+    			System.out.println("No member found to update the phone no.");
+    		}
+    		
+    	}catch (SQLException e) {
+            e.printStackTrace();
+        } finally {
+            // Close resources
+            try {
+                if (updatePhoneStatement != null) updatePhoneStatement.close();
+                if (connection != null) connection.close();
+            } catch (SQLException e) {
+                e.printStackTrace();
+            }
+        }
+    }
+    
+    //update address
+    public static void updateAddress(int memberId, String newAddress) {
+        PreparedStatement updateAddressStatement = null;
+        try {
+            connection = DriverManager.getConnection(URL, USER, PASSWORD);
+
+            // SQL query to update address
+            String updateAddressSql = "UPDATE MEMBERS SET address = ? WHERE member_id = ?";
+            updateAddressStatement = connection.prepareStatement(updateAddressSql);
+            updateAddressStatement.setString(1, newAddress);
+            updateAddressStatement.setInt(2, memberId);
+
+            int updateCount = updateAddressStatement.executeUpdate();
+
+            if (updateCount > 0) {
+                System.out.println("Address updated successfully.");
+            } else {
+                System.out.println("No member found to update the address.");
+            }
+
+        } catch (SQLException e) {
+            e.printStackTrace();
+        } finally {
+            // Close resources
+            try {
+                if (updateAddressStatement != null) updateAddressStatement.close();
+                if (connection != null) connection.close();
+            } catch (SQLException e) {
+                e.printStackTrace();
+            }
+        }
+    }
+
+    //change password
+    public static void changePassword(int memberId, String newPassword) {
+        PreparedStatement changePasswordStatement = null;
+        try {
+            connection = DriverManager.getConnection(URL, USER, PASSWORD);
+
+            // SQL query to update password
+            String changePasswordSql = "UPDATE MEMBERS SET password = ? WHERE member_id = ?";
+            changePasswordStatement = connection.prepareStatement(changePasswordSql);
+            changePasswordStatement.setString(1, newPassword);
+            changePasswordStatement.setInt(2, memberId);
+
+            int updateCount = changePasswordStatement.executeUpdate();
+
+            if (updateCount > 0) {
+                System.out.println("Password changed successfully.");
+            } else {
+                System.out.println("No member found to change the password.");
+            }
+
+        } catch (SQLException e) {
+            e.printStackTrace();
+        } finally {
+            // Close resources
+            try {
+                if (changePasswordStatement != null) changePasswordStatement.close();
+                if (connection != null) connection.close();
+            } catch (SQLException e) {
+                e.printStackTrace();
+            }
+        }
+    }
+
+    
 }
