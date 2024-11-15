@@ -697,69 +697,80 @@ public class Book
         }
     }
     
- // Method to add a new member 
+    // add member 
     public static void addMember(String name, String email, String phone, String address, String password) {
-        PreparedStatement statement = null;
-        ResultSet resultSet = null;
-
         try {
-            // Establish the connection to the database
             connection = DriverManager.getConnection(URL, USER, PASSWORD);
 
-            // First, check if the email already exists in the database
-            String checkEmailSQL = "SELECT email FROM members WHERE email = ?";
-            statement = connection.prepareStatement(checkEmailSQL);
-            statement.setString(1, email);
-            resultSet = statement.executeQuery();
-
-            // If the email already exists, return an error message and exit
-            if (resultSet.next()) {
-                System.out.println("Member with this email already exists. Try with different email id");
-                return;  // Return early to prevent adding the member
+            if (isEmailExists(email)) {
+                System.out.println("Error: Same email already exists.");
+                return;
+            }
+            
+            if (isPhoneExists(phone)) {
+                System.out.println("Error: Same phone number already exists.");
+                return;
             }
 
-            // SQL query to insert the new member into the members table
-            String insertSQL = "INSERT INTO members (name, email, phone, address, password) VALUES (?, ?, ?, ?, ?)";
-            statement = connection.prepareStatement(insertSQL, Statement.RETURN_GENERATED_KEYS);
+            String insertMemberSQL = "INSERT INTO members (name, email, phone, address, password) VALUES (?, ?, ?, ?, ?)";
+            PreparedStatement statement = connection.prepareStatement(insertMemberSQL, Statement.RETURN_GENERATED_KEYS);
             statement.setString(1, name);
             statement.setString(2, email);
             statement.setString(3, phone);
             statement.setString(4, address);
             statement.setString(5, password);
 
-            // Execute the insertion
             int rowsAffected = statement.executeUpdate();
 
             if (rowsAffected > 0) {
-                // Get the generated member_id
-                resultSet = statement.getGeneratedKeys();
-                if (resultSet.next()) {
-                    int memberId = resultSet.getInt(1);
-                    System.out.println("Member added successfully! Member ID: " + memberId);
+                ResultSet generatedKeys = statement.getGeneratedKeys();
+                if (generatedKeys.next()) {
+                    int memberId = generatedKeys.getInt(1);
+                    System.out.println("Member added successfully! Your Member ID is: " + memberId);
                 }
             } else {
-                System.out.println("Error: Failed to add the member.");
+                System.out.println("Failed to add member.");
             }
-
         } catch (SQLException e) {
             e.printStackTrace();
         } finally {
-            // Close the resources in the finally block to ensure they are always closed
             try {
-                if (resultSet != null) {
-                    resultSet.close(); // Close the ResultSet
-                }
-                if (statement != null) {
-                    statement.close(); // Close the PreparedStatement
-                }
-                if (connection != null) {
-                    connection.close(); // Close the Connection
-                }
+                if (connection != null) connection.close();
             } catch (SQLException e) {
                 e.printStackTrace();
             }
         }
     }
+
+    // methos to check if email exists
+    private static boolean isEmailExists(String email) {
+        try {
+            String emailCheckSQL = "SELECT * FROM members WHERE email = ?";
+            PreparedStatement statement = connection.prepareStatement(emailCheckSQL);
+            statement.setString(1, email);
+            ResultSet resultSet = statement.executeQuery();
+            return resultSet.next();
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return false;
+        }
+    }
+
+    // method to check if phone exists
+    private static boolean isPhoneExists(String phone) {
+        try {
+            String phoneCheckSQL = "SELECT * FROM members WHERE phone = ?";
+            PreparedStatement statement = connection.prepareStatement(phoneCheckSQL);
+            statement.setString(1, phone);
+            ResultSet resultSet = statement.executeQuery();
+            return resultSet.next();
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return false;
+        }
+    }
+    
+    
     
     // Method to delete a member by member_id
     public static void deleteMember(int memberId) {
