@@ -2,8 +2,9 @@ package library_application;
 
 import java.sql.*;
 import java.sql.Date;
-import java.time.LocalDate;
 import java.util.*;
+import java.time.*;
+import java.time.temporal.ChronoUnit;
 
 public class Member {
 	// JDBC URL, username, and password of MySQL server
@@ -363,6 +364,81 @@ public class Member {
         }
     }
 
+   // return book
+    public static void returnBook(int copyId, int memberId) {
+        Connection connection = null;
+        PreparedStatement returnStatement = null;
+        PreparedStatement historyStatement = null;
+        ResultSet resultSet = null;
 
-    
+        try {
+            connection = DriverManager.getConnection(URL, USER, PASSWORD);
+            connection.setAutoCommit(false);  // Start transaction
+
+            // Step 1: Update the availability status of the copy
+            String returnSql = "UPDATE copies SET availability_status = 'available' WHERE copy_id = ?";
+            returnStatement = connection.prepareStatement(returnSql);
+            returnStatement.setInt(1, copyId);
+            int updateCount = returnStatement.executeUpdate();
+
+            if (updateCount == 0) {
+                System.out.println("No copy found with Copy ID: " + copyId);
+                return;
+            }
+
+            // Step 2: Get the expected return date from loanhistory
+            String fetchLoanHistorySql = "SELECT expected_return_date FROM loanhistory WHERE copy_id = ? AND member_id = ? AND status = 'borrowed'";
+            PreparedStatement fetchStatement = connection.prepareStatement(fetchLoanHistorySql);
+            fetchStatement.setInt(1, copyId);
+            fetchStatement.setInt(2, memberId);
+            resultSet = fetchStatement.executeQuery();
+
+            if (!resultSet.next()) {
+                System.out.println("No loan record found for Copy ID: " + copyId + " and Member ID: " + memberId);
+                return;
+            }
+            Date expectedReturnDate = resultSet.getDate("expected_return_date");
+
+            // Step 3: Calculate fine if return is late
+            LocalDate returnDate = LocalDate.now();
+            long daysLate = ChronoUnit.DAYS.between(expectedReturnDate.toLocalDate(), returnDate);
+            if (daysLate > 0) {
+                int fine = (int) (10 * daysLate);
+                System.out.println("Book returned late by " + daysLate + " days. Fine: Rs " + fine);
+            }
+
+            // Step 4: Insert into loanhistory with updated status and return date
+            String insertHistory = "UPDATE loanhistory SET return_date = ?, status = 'returned' WHERE copy_id = ? AND member_id = ? AND status = 'borrowed'";
+            historyStatement = connection.prepareStatement(insertHistory);
+            historyStatement.setDate(1, Date.valueOf(returnDate));
+            historyStatement.setInt(2, copyId);
+            historyStatement.setInt(3, memberId);
+
+            historyStatement.executeUpdate();
+
+            connection.commit();  // Commit the transaction
+            System.out.println("Book successfully returned for Copy ID: " + copyId);
+        } catch (SQLException e) {
+            e.printStackTrace();
+            try {
+                if (connection != null) {
+                    connection.rollback();  // Rollback the transaction in case of an error
+                }
+            } catch (SQLException ex) {
+                ex.printStackTrace();
+            }
+        } finally {
+            // Close resources
+            try {
+                if (resultSet != null) resultSet.close();
+                if (returnStatement != null) returnStatement.close();
+                if (historyStatement != null) historyStatement.close();
+                if (connection != null) connection.close();
+            } catch (SQLException e) {
+                e.printStackTrace();
+            }
+        }
+    }
+
+
 }
