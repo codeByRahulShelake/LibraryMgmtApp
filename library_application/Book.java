@@ -15,175 +15,174 @@ public class Book
     private static Connection connection;
     
    static Scanner sc = new Scanner(System.in);
-    
-    // method to add new book in database
-    public static void addBookData(String title, String author, String genre, int totalCopies) {
-        try {
-            // Establish the connection to the database
-            connection = DriverManager.getConnection(URL, USER, PASSWORD);
+      
+   public static void addBook(String title, String author, String genre, int totalCopies) {
+       try {
+           // Establish the connection to the database
+           connection = DriverManager.getConnection(URL, USER, PASSWORD);
 
-            // Start a transaction to ensure both insertions happen together
-            connection.setAutoCommit(false);
+           // Start a transaction to ensure both insertions happen together
+           connection.setAutoCommit(false);
 
-            // 1. Check if the book already exists in the Books table
-            String checkBookSQL = "SELECT book_id, total_copies FROM Books WHERE title = ? AND author = ?";
-            PreparedStatement checkBookStatement = connection.prepareStatement(checkBookSQL);
-            checkBookStatement.setString(1, title);
-            checkBookStatement.setString(2, author);
+           // 1. Check if the book already exists in the Books table
+           String checkBookSQL = "SELECT book_id, total_copies FROM Books WHERE title = ? AND author = ?";
+           PreparedStatement checkBookStatement = connection.prepareStatement(checkBookSQL);
+           checkBookStatement.setString(1, title);
+           checkBookStatement.setString(2, author);
 
-            ResultSet resultSet = checkBookStatement.executeQuery();
+           ResultSet resultSet = checkBookStatement.executeQuery();
 
-            if (resultSet.next()) {
-                // Book already exists, update the total_copies in the Books table
-                int existingCopies = resultSet.getInt("total_copies");
-                int newTotalCopies = existingCopies + totalCopies;
+           if (resultSet.next()) {
+               // Book already exists, update the total_copies in the Books table
+               int existingCopies = resultSet.getInt("total_copies");
+               int newTotalCopies = existingCopies + totalCopies;
 
-                String updateBookSQL = "UPDATE Books SET total_copies = ? WHERE book_id = ?";
-                PreparedStatement updateBookStatement = connection.prepareStatement(updateBookSQL);
-                updateBookStatement.setInt(1, newTotalCopies);
-                updateBookStatement.setInt(2, resultSet.getInt("book_id"));
+               String updateBookSQL = "UPDATE Books SET total_copies = ? WHERE book_id = ?";
+               PreparedStatement updateBookStatement = connection.prepareStatement(updateBookSQL);
+               updateBookStatement.setInt(1, newTotalCopies);
+               updateBookStatement.setInt(2, resultSet.getInt("book_id"));
 
-                int rowsAffected = updateBookStatement.executeUpdate();
+               int rowsAffected = updateBookStatement.executeUpdate();
 
-                if (rowsAffected > 0) {
-                    // 2. Insert additional copies in the Copies table
-                    String insertCopySQL = "INSERT INTO Copies (book_id, availability_status) VALUES (?, ?)";
-                    PreparedStatement copyStatement = connection.prepareStatement(insertCopySQL);
+               if (rowsAffected > 0) {
+                   // 2. Insert additional copies in the Copies table
+                   String insertCopySQL = "INSERT INTO Copies (book_id, availability_status) VALUES (?, ?)";
+                   PreparedStatement copyStatement = connection.prepareStatement(insertCopySQL);
 
-                    // Insert the new copies
-                    for (int i = 0; i < totalCopies; i++) {
-                        copyStatement.setInt(1, resultSet.getInt("book_id")); // Use the existing book_id
-                        copyStatement.setString(2, "available"); // Set the initial availability status
-                        copyStatement.addBatch();
-                    }
+                   // Insert the new copies
+                   for (int i = 0; i < totalCopies; i++) {
+                       copyStatement.setInt(1, resultSet.getInt("book_id")); // Use the existing book_id
+                       copyStatement.setString(2, "available"); // Set the initial availability status
+                       copyStatement.addBatch();
+                   }
 
-                    // Execute the batch insert for copies
-                    copyStatement.executeBatch();
-                    connection.commit(); // Commit the transaction
+                   // Execute the batch insert for copies
+                   copyStatement.executeBatch();
+                   connection.commit(); // Commit the transaction
 
-                    System.out.println("Copies added successfully! Total copies: " + newTotalCopies);
-                } else {
-                    System.out.println("Failed to update the book.");
-                    connection.rollback(); // Rollback if update fails
-                }
-            } else {
-                // Book does not exist, insert a new book into the Books table
-                String insertBookSQL = "INSERT INTO Books (title, author, genre, total_copies) VALUES (?, ?, ?, ?)";
-                PreparedStatement bookStatement = connection.prepareStatement(insertBookSQL, PreparedStatement.RETURN_GENERATED_KEYS);
-                bookStatement.setString(1, title);
-                bookStatement.setString(2, author);
-                bookStatement.setString(3, genre);
-                bookStatement.setInt(4, totalCopies);
+                   System.out.println("Copies added successfully! Total copies: " + newTotalCopies);
+               } else {
+                   System.out.println("Failed to update the book.");
+                   connection.rollback(); // Rollback if update fails
+               }
+           } else {
+               // Book does not exist, insert a new book into the Books table
+               String insertBookSQL = "INSERT INTO Books (title, author, genre, total_copies) VALUES (?, ?, ?, ?)";
+               PreparedStatement bookStatement = connection.prepareStatement(insertBookSQL, PreparedStatement.RETURN_GENERATED_KEYS);
+               bookStatement.setString(1, title);
+               bookStatement.setString(2, author);
+               bookStatement.setString(3, genre);
+               bookStatement.setInt(4, totalCopies);
 
-                int rowsAffected = bookStatement.executeUpdate();
+               int rowsAffected = bookStatement.executeUpdate();
 
-                if (rowsAffected > 0) {
-                    // Get the generated book_id for the newly inserted book
-                    ResultSet generatedKeys = bookStatement.getGeneratedKeys();
-                    if (generatedKeys.next()) {
-                        int bookId = generatedKeys.getInt(1);
+               if (rowsAffected > 0) {
+                   // Get the generated book_id for the newly inserted book
+                   ResultSet generatedKeys = bookStatement.getGeneratedKeys();
+                   if (generatedKeys.next()) {
+                       int bookId = generatedKeys.getInt(1);
 
-                        // 2. Insert data into the Copies table for the new book
-                        String insertCopySQL = "INSERT INTO Copies (book_id, availability_status) VALUES (?, ?)";
-                        PreparedStatement copyStatement = connection.prepareStatement(insertCopySQL);
+                       // 2. Insert data into the Copies table for the new book
+                       String insertCopySQL = "INSERT INTO Copies (book_id, availability_status) VALUES (?, ?)";
+                       PreparedStatement copyStatement = connection.prepareStatement(insertCopySQL);
 
-                        // Insert multiple copies
-                        for (int i = 0; i < totalCopies; i++) {
-                            copyStatement.setInt(1, bookId); // Set the book_id of the newly added book
-                            copyStatement.setString(2, "available"); // Set the initial availability status
-                            copyStatement.addBatch();
-                        }
+                       // Insert multiple copies
+                       for (int i = 0; i < totalCopies; i++) {
+                           copyStatement.setInt(1, bookId); // Set the book_id of the newly added book
+                           copyStatement.setString(2, "available"); // Set the initial availability status
+                           copyStatement.addBatch();
+                       }
 
-                        // Execute the batch insert for copies
-                        copyStatement.executeBatch();
-                        connection.commit(); // Commit the transaction
+                       // Execute the batch insert for copies
+                       copyStatement.executeBatch();
+                       connection.commit(); // Commit the transaction
 
-                        System.out.println("Book and copies added successfully!");
-                    }
-                } else {
-                    System.out.println("Failed to add the book.");
-                    connection.rollback(); // Rollback the transaction if book insert fails
-                }
-            }
+                       System.out.println("Book and copies added successfully!");
+                   }
+               } else {
+                   System.out.println("Failed to add the book.");
+                   connection.rollback(); // Rollback the transaction if book insert fails
+               }
+           }
 
-        } catch (SQLException e) {
-            e.printStackTrace();
-            try {
-                if (connection != null) {
-                    connection.rollback(); // Rollback the transaction in case of an error
-                }
-            } catch (SQLException ex) {
-                ex.printStackTrace();
-            }
-        } finally {
-            try {
-                if (connection != null) {
-                    connection.close(); // Close the connection
-                }
-            } catch (SQLException e) {
-                e.printStackTrace();
-            }
-        }
-    }
+       } catch (SQLException e) {
+           e.printStackTrace();
+           try {
+               if (connection != null) {
+                   connection.rollback(); // Rollback the transaction in case of an error
+               }
+           } catch (SQLException ex) {
+               ex.printStackTrace();
+           }
+       } finally {
+           try {
+               if (connection != null) {
+                   connection.close(); // Close the connection
+               }
+           } catch (SQLException e) {
+               e.printStackTrace();
+           }
+       }
+   }
 
-    // delete book method
-    public void deleteBook(int book_id, String title) {
-        Connection connection = null;
-        try {
-            // Establish the connection to the database
-            connection = DriverManager.getConnection(URL, USER, PASSWORD);
+   // delete book method
+   public void deleteBook(int book_id, String title) {
+       Connection connection = null;
+       try {
+           // Establish the connection to the database
+           connection = DriverManager.getConnection(URL, USER, PASSWORD);
 
-            // Start a transaction to ensure both delete operations happen together
-            connection.setAutoCommit(false);
+           // Start a transaction to ensure both delete operations happen together
+           connection.setAutoCommit(false);
 
-            // 1. Delete data from the Copies table
-            String deleteCopySQL = "DELETE FROM Copies WHERE book_id = ?";
-            PreparedStatement copyStatement = connection.prepareStatement(deleteCopySQL);
-            copyStatement.setInt(1, book_id);
+           // 1. Delete data from the Copies table
+           String deleteCopySQL = "DELETE FROM Copies WHERE book_id = ?";
+           PreparedStatement copyStatement = connection.prepareStatement(deleteCopySQL);
+           copyStatement.setInt(1, book_id);
 
-            int rowsAffected = copyStatement.executeUpdate();
+           int rowsAffected = copyStatement.executeUpdate();
 
-            if (rowsAffected >= 0) {
-                // 2. Delete data from the Books table
-                String deleteBookSQL = "DELETE FROM Books WHERE book_id = ? AND title = ?";
-                PreparedStatement bookStatement = connection.prepareStatement(deleteBookSQL);
-                bookStatement.setInt(1, book_id);
-                bookStatement.setString(2, title);
+           if (rowsAffected >= 0) {
+               // 2. Delete data from the Books table
+               String deleteBookSQL = "DELETE FROM Books WHERE book_id = ? AND title = ?";
+               PreparedStatement bookStatement = connection.prepareStatement(deleteBookSQL);
+               bookStatement.setInt(1, book_id);
+               bookStatement.setString(2, title);
 
-                rowsAffected = bookStatement.executeUpdate();
+               rowsAffected = bookStatement.executeUpdate();
 
-                if (rowsAffected > 0) {
-                    connection.commit(); // Commit the transaction
-                    System.out.println("Book and its copies deleted successfully!");
-                } else {
-                    System.out.println("Failed to delete the book.");
-                    connection.rollback(); // Rollback if the book delete fails
-                }
-            } else {
-                System.out.println("Failed to delete copies.");
-                connection.rollback(); // Rollback if the copies delete fails
-            }
+               if (rowsAffected > 0) {
+                   connection.commit(); // Commit the transaction
+                   System.out.println("Book and its copies deleted successfully!");
+               } else {
+                   System.out.println("Failed to delete the book.");
+                   connection.rollback(); // Rollback if the book delete fails
+               }
+           } else {
+               System.out.println("Failed to delete copies.");
+               connection.rollback(); // Rollback if the copies delete fails
+           }
 
-        } catch (SQLException e) {
-            e.printStackTrace();
-            try {
-                if (connection != null) {
-                    connection.rollback(); // Rollback the transaction in case of an error
-                }
-            } catch (SQLException ex) {
-                ex.printStackTrace();
-            }
-        } finally {
-            try {
-                if (connection != null) {
-                    connection.close(); // Close the connection
-                }
-            } catch (SQLException e) {
-                e.printStackTrace();
-            }
-        }
-    }
-    
+       } catch (SQLException e) {
+           e.printStackTrace();
+           try {
+               if (connection != null) {
+                   connection.rollback(); // Rollback the transaction in case of an error
+               }
+           } catch (SQLException ex) {
+               ex.printStackTrace();
+           }
+       } finally {
+           try {
+               if (connection != null) {
+                   connection.close(); // Close the connection
+               }
+           } catch (SQLException e) {
+               e.printStackTrace();
+           }
+       }
+   }
+   
     // Method to select and display all books from the database
     public static void displayAllBooks() {
         try {
@@ -250,7 +249,8 @@ public class Book
         }
     }
     
-    public static void displayCopiesInfo(int book_id) {
+    // display all copies
+    public static void displayCopies(int book_id) {
         try {
             connection = DriverManager.getConnection(URL, USER, PASSWORD);
 
@@ -289,6 +289,61 @@ public class Book
                         }
                 }
             
+
+        } catch (SQLException e) {
+            e.printStackTrace();
+        } finally {
+            try {
+                if (connection != null) {
+                    connection.close();
+                }
+            } catch (SQLException e) {
+                e.printStackTrace();
+            }
+        }
+    }
+    
+ // Method to view book details using book_id and display availability count
+    public static void viewBookDetailsByBookId(int bookId) {
+        try {
+            connection = DriverManager.getConnection(URL, USER, PASSWORD);
+
+            // Query to get book details using book_id
+            String bookDetailsSQL = "SELECT b.book_id, b.title, b.author, b.genre, b.total_copies " +
+                                    "FROM books b " +
+                                    "WHERE b.book_id = ?";
+            PreparedStatement bookStatement = connection.prepareStatement(bookDetailsSQL);
+            bookStatement.setInt(1, bookId);
+            ResultSet bookResultSet = bookStatement.executeQuery();
+
+            if (bookResultSet.next()) {
+                // Display basic book details
+                System.out.println("\nBook Details:");
+                System.out.printf("Book ID: %d\n", bookResultSet.getInt("book_id"));
+                System.out.printf("Title: %s\n", bookResultSet.getString("title"));
+                System.out.printf("Author: %s\n", bookResultSet.getString("author"));
+                System.out.printf("Genre: %s\n", bookResultSet.getString("genre"));
+                System.out.printf("Total Copies: %d\n", bookResultSet.getInt("total_copies"));
+
+              
+                // Query to count available copies for the specific book
+                String availableCopiesSQL = "SELECT COUNT(*) AS available_count " +
+                                            "FROM copies " +
+                                            "WHERE book_id = ? AND availability_status = 'available'";
+                PreparedStatement availabilityStatement = connection.prepareStatement(availableCopiesSQL);
+                availabilityStatement.setInt(1, bookId);
+                ResultSet availabilityResultSet = availabilityStatement.executeQuery();
+
+                if (availabilityResultSet.next()) {
+                    int availableCopies = availabilityResultSet.getInt("available_count");
+                    System.out.printf("Available Copies: %d\n", availableCopies);
+                } else {
+                    System.out.println("No copies available for this book.");
+                }
+
+            } else {
+                System.out.println("No book found for the given Book ID: " + bookId);
+            }
 
         } catch (SQLException e) {
             e.printStackTrace();
@@ -385,8 +440,10 @@ public class Book
             System.out.printf("%-10s %-30s %-20s %-15s %-15s%n", "Book ID", "Title", "Author", "Genre", "Total Copies");
             System.out.println("------------------------------------------------------------------------------------------");
 
+            int recordCount = 0; // to display books in set
             // Display each matching book in a table format
             while (resultSet.next()) {
+            	recordCount++;
                 int bookId = resultSet.getInt("book_id");
                 String title = resultSet.getString("title");
                 if (title.length() > 30) {
@@ -403,6 +460,21 @@ public class Book
                 int totalCopies = resultSet.getInt("total_copies");
 
                 System.out.printf("%-10d %-30s %-20s %-15s %-15d%n", bookId, title, author, genre, totalCopies);
+                
+             // Check if 10 records have been displayed and there are more records left
+                if (recordCount == 10 && !resultSet.isLast()) {
+                	System.out.println();
+                    	System.out.println("Enter 'next' If you want to see next set of books or enter anything to exit");
+                    	String choice = sc.nextLine();
+                    	if(choice.equalsIgnoreCase("next"))
+                    	{
+                    		recordCount = 0;
+                    	}
+                    	else
+                    	{
+                    		break;
+                    	}
+                    }
             }
         } catch (SQLException e) {
             e.printStackTrace();
@@ -442,8 +514,10 @@ public class Book
             System.out.printf("%-10s %-30s %-20s %-15s %-15s%n", "Book ID", "Title", "Author", "Genre", "Total Copies");
             System.out.println("------------------------------------------------------------------------------------------");
 
+            int recordCount = 0; // to display books in set
             // Display each matching book in a table format
             while (resultSet.next()) {
+            	recordCount++;
                 int bookId = resultSet.getInt("book_id");
                 String title = resultSet.getString("title");
                 if (title.length() > 30) {
@@ -460,6 +534,21 @@ public class Book
                 int totalCopies = resultSet.getInt("total_copies");
 
                 System.out.printf("%-10d %-30s %-20s %-15s %-15d%n", bookId, title, author, genre, totalCopies);
+                
+             // Check if 10 records have been displayed and there are more records left
+                if (recordCount == 10 && !resultSet.isLast()) {
+                	System.out.println();
+                    	System.out.println("Enter 'next' If you want to see next set of books or enter anything to exit");
+                    	String choice = sc.nextLine();
+                    	if(choice.equalsIgnoreCase("next"))
+                    	{
+                    		recordCount = 0;
+                    	}
+                    	else
+                    	{
+                    		break;
+                    	}
+                    }
             }
         } catch (SQLException e) {
             e.printStackTrace();
@@ -504,8 +593,10 @@ public class Book
             System.out.printf("%-10s %-30s %-20s %-15s %-15s%n", "Book ID", "Title", "Author", "Genre", "Total Copies");
             System.out.println("------------------------------------------------------------------------------------------");
 
+            int recordCount = 0; // to display books in set
             // Display each matching book in a table format
             while (resultSet.next()) {
+            	recordCount++;
                 int bookId = resultSet.getInt("book_id");
                 String title = resultSet.getString("title");
                 if (title.length() > 30) {
@@ -522,6 +613,20 @@ public class Book
                 int totalCopies = resultSet.getInt("total_copies");
 
                 System.out.printf("%-10d %-30s %-20s %-15s %-15d%n", bookId, title, author, genre, totalCopies);
+             // Check if 10 records have been displayed and there are more records left
+                if (recordCount == 10 && !resultSet.isLast()) {
+                	System.out.println();
+                    	System.out.println("Enter 'next' If you want to see next set of books or enter anything to exit");
+                    	String choice = sc.nextLine();
+                    	if(choice.equalsIgnoreCase("next"))
+                    	{
+                    		recordCount = 0;
+                    	}
+                    	else
+                    	{
+                    		break;
+                    	}
+                    }
             }
         } catch (SQLException e) {
             e.printStackTrace();
