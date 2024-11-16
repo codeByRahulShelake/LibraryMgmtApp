@@ -1,6 +1,7 @@
 package library_application;
 
 import java.sql.*;
+import java.sql.Date;
 import java.util.*;
 
 public class Book 
@@ -312,6 +313,71 @@ public class Book
             }
         }
     }
+    
+ // Method to view loan history of all members
+    public static void viewLoanHistory() {
+        try {
+            connection = DriverManager.getConnection(URL, USER, PASSWORD);
+
+            // SQL query to fetch the loan history, joining loanhistory, books, and members
+            String selectLoanHistorySQL = 
+                "SELECT lh.loan_id, b.title AS book_title, m.name AS member_name, lh.borrow_date, " +
+                "lh.return_date, lh.expected_return_date, lh.status " +
+                "FROM loanhistory lh " +
+                "JOIN copies c ON lh.copy_id = c.copy_id " +
+                "JOIN books b ON c.book_id = b.book_id " +
+                "JOIN members m ON lh.member_id = m.member_id " +
+                "ORDER BY lh.loan_id DESC"; // Order by loan_id (most recent first)
+
+            PreparedStatement statement = connection.prepareStatement(selectLoanHistorySQL);
+            ResultSet resultSet = statement.executeQuery();
+
+            // Display table header
+            System.out.println();
+            System.out.printf("%-10s %-30s %-20s %-15s %-15s %-20s %-15s%n", 
+                              "Loan ID", "Book Title", "Member Name", "Borrow Date", 
+                              "Return Date", "Expected Return", "Status");
+            System.out.println("---------------------------------------------------------------------------------------------");
+
+            if (!resultSet.isBeforeFirst()) {
+                System.out.println("No loan history found.");
+                return;
+            }
+
+            // Display each loan record in table format
+            while (resultSet.next()) {
+                int loanId = resultSet.getInt("loan_id");
+                String bookTitle = resultSet.getString("book_title");
+                if (bookTitle.length() > 30) {
+                    bookTitle = bookTitle.substring(0, 27) + "...";  // Limit to 30 characters
+                }
+                String memberName = resultSet.getString("member_name");
+                if (memberName.length() > 20) {
+                    memberName = memberName.substring(0, 17) + "...";  // Limit to 20 characters
+                }
+                Date borrowDate = resultSet.getDate("borrow_date");
+                Date returnDate = resultSet.getDate("return_date");
+                Date expectedReturnDate = resultSet.getDate("expected_return_date");
+                String status = resultSet.getString("status");
+
+                System.out.printf("%-10d %-30s %-20s %-15s %-15s %-20s %-15s%n", 
+                                  loanId, bookTitle, memberName, borrowDate, returnDate, 
+                                  expectedReturnDate, status);
+            }
+
+        } catch (SQLException e) {
+            e.printStackTrace();
+        } finally {
+            try {
+                if (connection != null) {
+                    connection.close();
+                }
+            } catch (SQLException e) {
+                e.printStackTrace();
+            }
+        }
+    }
+
     
  // Method to view book details using book_id and display availability count
     public static void viewBookDetailsByBookId(int bookId) {
@@ -842,6 +908,196 @@ public class Book
             try {
                 if (connection != null) {
                     connection.close(); // Close the connection
+                }
+            } catch (SQLException e) {
+                e.printStackTrace();
+            }
+        }
+    }
+    
+    // Method to display the top 5 most borrowed books (including returned books)
+    public static void displayMostBorrowedBooks() {
+        try {
+            connection = DriverManager.getConnection(URL, USER, PASSWORD);
+
+            // Query to get the most borrowed books, ordered by borrow count
+            String selectMostBorrowedBooksSQL = 
+                "SELECT b.book_id, b.title, b.author, COUNT(lh.loan_id) AS borrow_count " +
+                "FROM books b " +
+                "JOIN copies c ON b.book_id = c.book_id " +
+                "JOIN loanhistory lh ON c.copy_id = lh.copy_id " +
+                "GROUP BY b.book_id, b.title, b.author " +  // Group by book
+                "ORDER BY borrow_count DESC " +  // Order by most borrowed books
+                "LIMIT 5";  // Limit to top 5 books
+
+            PreparedStatement statement = connection.prepareStatement(selectMostBorrowedBooksSQL);
+            ResultSet resultSet = statement.executeQuery();
+
+            // Display table header
+            System.out.println();
+            System.out.printf("%-10s %-30s %-20s %-10s%n", "Book ID", "Title", "Author", "Borrow Count");
+            System.out.println("---------------------------------------------------------------------------------");
+
+            if (!resultSet.isBeforeFirst()) {
+                System.out.println("No borrowed books found.");
+                return;
+            }
+
+            // Display the most borrowed books
+            while (resultSet.next()) {
+                int bookId = resultSet.getInt("book_id");
+                String title = resultSet.getString("title");
+                if (title.length() > 30) {
+                    title = title.substring(0, 27) + "...";  // Limit to 30 characters
+                }
+                String author = resultSet.getString("author");
+                if (author.length() > 20) {
+                    author = author.substring(0, 17) + "...";  // Limit to 20 characters
+                }
+                int borrowCount = resultSet.getInt("borrow_count");
+
+                System.out.printf("%-10d %-30s %-20s %-10d%n", bookId, title, author, borrowCount);
+            }
+
+        } catch (SQLException e) {
+            e.printStackTrace();
+        } finally {
+            try {
+                if (connection != null) {
+                    connection.close();
+                }
+            } catch (SQLException e) {
+                e.printStackTrace();
+            }
+        }
+    }
+
+    // Method to display the most popular genres based on all loans (borrowed and returned)
+    public static void displayMostPopularGenres() {
+        try {
+            connection = DriverManager.getConnection(URL, USER, PASSWORD);
+
+            // SQL query to get the most popular genres based on the number of borrowed or returned books (LIMIT 5)
+            String selectPopularGenresSQL = 
+                "SELECT b.genre, COUNT(lh.loan_id) AS borrow_count " +
+                "FROM books b " +
+                "JOIN copies c ON b.book_id = c.book_id " +
+                "JOIN loanhistory lh ON c.copy_id = lh.copy_id " +
+                "GROUP BY b.genre " +
+                "ORDER BY borrow_count DESC " +  // Order by most borrowed genres
+                "LIMIT 5";  // Limit the result to the top 5 genres
+
+            PreparedStatement statement = connection.prepareStatement(selectPopularGenresSQL);
+            ResultSet resultSet = statement.executeQuery();
+
+            // Display table header
+            System.out.println();
+            System.out.printf("%-20s %-15s%n", "Genre", "Borrow Count");
+            System.out.println("--------------------------------------");
+
+            if (!resultSet.isBeforeFirst()) {
+                System.out.println("No borrowed books found for any genre.");
+                return;
+            }
+
+            // Display the most popular genres
+            while (resultSet.next()) {
+                String genre = resultSet.getString("genre");
+                if (genre.length() > 20) {
+                    genre = genre.substring(0, 17) + "...";  // Limit to 20 characters
+                }
+                int borrowCount = resultSet.getInt("borrow_count");
+
+                System.out.printf("%-20s %-15d%n", genre, borrowCount);
+            }
+
+        } catch (SQLException e) {
+            e.printStackTrace();
+        } finally {
+            try {
+                if (connection != null) {
+                    connection.close();
+                }
+            } catch (SQLException e) {
+                e.printStackTrace();
+            }
+        }
+    }
+
+    // Method to display the total number of books borrowed (including returned books)
+    public static void displayTotalBooksBorrowed() {
+        try {
+            connection = DriverManager.getConnection(URL, USER, PASSWORD);
+
+            // Query to get the total number of books borrowed (including returned books)
+            String selectTotalBorrowedSQL = 
+                "SELECT COUNT(lh.loan_id) AS total_borrowed " +
+                "FROM loanhistory lh";  // Count all loans, regardless of their status
+
+            PreparedStatement statement = connection.prepareStatement(selectTotalBorrowedSQL);
+            ResultSet resultSet = statement.executeQuery();
+
+            // Display total borrowed books count
+            if (resultSet.next()) {
+                int totalBorrowed = resultSet.getInt("total_borrowed");
+                System.out.println("Total Books Borrowed (including returned): " + totalBorrowed);
+            }
+
+        } catch (SQLException e) {
+            e.printStackTrace();
+        } finally {
+            try {
+                if (connection != null) {
+                    connection.close();
+                }
+            } catch (SQLException e) {
+                e.printStackTrace();
+            }
+        }
+    }
+
+    // Method to display the loan history for all books
+    public static void displayLoanHistory() {
+        try {
+            connection = DriverManager.getConnection(URL, USER, PASSWORD);
+
+            // Query to get the loan history for all books
+            String selectLoanHistorySQL = 
+                "SELECT lh.loan_id, b.title, lh.borrow_date, lh.return_date, lh.status " +
+                "FROM loanhistory lh " +
+                "JOIN copies c ON lh.copy_id = c.copy_id " +
+                "JOIN books b ON c.book_id = b.book_id";
+
+            PreparedStatement statement = connection.prepareStatement(selectLoanHistorySQL);
+            ResultSet resultSet = statement.executeQuery();
+
+            // Display table header
+            System.out.println();
+            System.out.printf("%-10s %-30s %-15s %-15s %-10s%n", "Loan ID", "Book Title", "Borrow Date", "Return Date", "Status");
+            System.out.println("--------------------------------------------------------------------------");
+
+            if (!resultSet.isBeforeFirst()) {
+                System.out.println("No loan history found.");
+                return;
+            }
+
+            // Display loan history
+            while (resultSet.next()) {
+                int loanId = resultSet.getInt("loan_id");
+                String bookTitle = resultSet.getString("title");
+                Date borrowDate = resultSet.getDate("borrow_date");
+                Date returnDate = resultSet.getDate("return_date");
+                String status = resultSet.getString("status");
+
+                System.out.printf("%-10d %-30s %-15s %-15s %-10s%n", loanId, bookTitle, borrowDate, returnDate, status);
+            }
+
+        } catch (SQLException e) {
+            e.printStackTrace();
+        } finally {
+            try {
+                if (connection != null) {
+                    connection.close();
                 }
             } catch (SQLException e) {
                 e.printStackTrace();
