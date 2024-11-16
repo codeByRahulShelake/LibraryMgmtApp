@@ -849,7 +849,7 @@ public class Book
         }
     }
     
- // Add member
+    // Add member
     public static void addMember(String name, String email, String phone, String address, String password, int balance) {
         Connection connection = null;
         PreparedStatement statement = null;
@@ -971,8 +971,149 @@ public class Book
         }
     }
     
+ // Method to display all members 
+    public static void displayAllMembers() {
+        try {
+            connection = DriverManager.getConnection(URL, USER, PASSWORD);
+
+            String selectMembersSQL = "SELECT * FROM Members";
+            PreparedStatement statement = connection.prepareStatement(selectMembersSQL);
+
+            ResultSet resultSet = statement.executeQuery();
+
+            // Display table header
+            System.out.println();
+            System.out.printf("%-10s %-20s %-30s %-15s %-20s %-15s %-15s%n", 
+                              "Member ID", "Name", "Email", "Phone", "Address", "Balance", "Password");
+            System.out.println("------------------------------------------------------------------------------------------------------------------------------------");
+
+            if (!resultSet.isBeforeFirst()) {
+                System.out.println("No members found.");
+                return;
+            }
+
+            int recordCount = 0; // count to display records in sets
+            // Display each member's information in table format
+            while (resultSet.next()) {
+                recordCount++;
+
+                int memberId = resultSet.getInt("member_id");
+                String name = resultSet.getString("name");
+                if (name.length() > 20) {
+                    name = name.substring(0, 17) + "...";  // Limit to 20 characters
+                }
+                String email = resultSet.getString("email");
+                if (email.length() > 30) {
+                    email = email.substring(0, 27) + "...";  // Limit to 30 characters
+                }
+                String phone = resultSet.getString("phone");
+                String address = resultSet.getString("address");
+                if (address.length() > 20) {
+                    address = address.substring(0, 17) + "...";  // Limit to 20 characters
+                }
+                double balance = resultSet.getDouble("balance");
+                String password = resultSet.getString("password");
+                if (password.length() > 15) {
+                    password = password.substring(0, 12) + "...";  // Limit to 15 characters
+                }
+
+                System.out.printf("%-10d %-20s %-30s %-15s %-20s %-15.2f %-15s%n", 
+                                  memberId, name, email, phone, address, balance, password);
+
+                // Check if 10 records have been displayed and there are more records left
+                if (recordCount == 10 && !resultSet.isLast()) {
+                    System.out.println();
+                    System.out.println("Enter 'next' to view the next set of members or any other key to exit:");
+                    String choice = sc.nextLine();
+                    if (choice.equalsIgnoreCase("next")) {
+                        recordCount = 0;
+                    } else {
+                        break;
+                    }
+                }
+            }
+
+        } catch (SQLException e) {
+            e.printStackTrace();
+        } finally {
+            try {
+                if (connection != null) {
+                    connection.close();
+                }
+            } catch (SQLException e) {
+                e.printStackTrace();
+            }
+        }
+    }
+
+ // Method to display member details by member_id
+    public static void displayMemberById(int memberId) {
+        try {
+
+            connection = DriverManager.getConnection(URL, USER, PASSWORD);
+
+            // Query to select a member by their ID
+            String selectMemberSQL = "SELECT * FROM Members WHERE member_id = ?";
+            PreparedStatement statement = connection.prepareStatement(selectMemberSQL);
+            statement.setInt(1, memberId);
+
+            ResultSet resultSet = statement.executeQuery();
+
+            // Display table header
+            System.out.println();
+            System.out.printf("%-10s %-20s %-30s %-15s %-20s %-15s %-15s%n", 
+                              "Member ID", "Name", "Email", "Phone", "Address", "Balance", "Password");
+            System.out.println("------------------------------------------------------------------------------------------------------------------------------------");
+
+            // Check if the result set has any records
+            if (!resultSet.isBeforeFirst()) {
+                System.out.println("No member found with ID: " + memberId);
+                return;
+            }
+
+            // Display the member details
+            if (resultSet.next()) {
+                int id = resultSet.getInt("member_id");
+                String name = resultSet.getString("name");
+                if (name.length() > 20) {
+                    name = name.substring(0, 17) + "...";  // Limit to 20 characters
+                }
+                String email = resultSet.getString("email");
+                if (email.length() > 30) {
+                    email = email.substring(0, 27) + "...";  // Limit to 30 characters
+                }
+                String phone = resultSet.getString("phone");
+                String address = resultSet.getString("address");
+                if (address.length() > 20) {
+                    address = address.substring(0, 17) + "...";  // Limit to 20 characters
+                }
+                double balance = resultSet.getDouble("balance");
+                String password = resultSet.getString("password");
+                if (password.length() > 15) {
+                    password = password.substring(0, 12) + "...";  // Limit to 15 characters
+                }
+
+                // Display member details in formatted table
+                System.out.printf("%-10d %-20s %-30s %-15s %-20s %-15.2f %-15s%n", 
+                                  id, name, email, phone, address, balance, password);
+            }
+
+        } catch (SQLException e) {
+            e.printStackTrace();
+        } finally {
+            try {
+                if (connection != null) {
+                    connection.close();
+                }
+            } catch (SQLException e) {
+                e.printStackTrace();
+            }
+        }
+    }
+
+    
  // update member name
-    public static void updateName(int memberId, String newName)
+    public static void updateMemberName(int memberId, String newName)
     {
     	PreparedStatement updateNameStatement = null;
     	try {
@@ -1007,7 +1148,7 @@ public class Book
     }
     
     // update member email
-    public static void updateEmail(int memberId, String newEmail)
+    public static void updateMemberEmail(int memberId, String newEmail)
     {
     	PreparedStatement updateEmailStatement = null;
     	try {
@@ -1042,7 +1183,7 @@ public class Book
     }
     
     // update member phone
-    public static void updatePhone(int memberId, String newPhone)
+    public static void updateMemberPhone(int memberId, String newPhone)
     {
     	PreparedStatement updatePhoneStatement = null;
     	try {
@@ -1077,7 +1218,7 @@ public class Book
     }
     
     //update member address
-    public static void updateAddress(int memberId, String newAddress) {
+    public static void updateMemberAddress(int memberId, String newAddress) {
         PreparedStatement updateAddressStatement = null;
         try {
             connection = DriverManager.getConnection(URL, USER, PASSWORD);
@@ -1109,5 +1250,6 @@ public class Book
         }
     }
 
+    
 
 }
