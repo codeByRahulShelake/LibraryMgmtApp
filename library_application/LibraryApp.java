@@ -300,7 +300,7 @@ public class LibraryApp
 						    		            			System.out.println("Enter new title of the book : ");
 						    		            			String newTitle = sc.nextLine();
 						    		            			
-						    		            			actions.updateBookTitle(bookId, newTitle)
+						    		            			actions.updateBookTitle(bookId, newTitle);;
 						    		            			
 						    		            		}catch (InputMismatchException e) 
 						    			                {
@@ -698,7 +698,354 @@ public class LibraryApp
 	            	break;// admin case ends here
 	            
 	            case 2 : //user
-	            	
+	            	boolean userFlag = true;
+	            	while(userFlag)
+	            	{
+	                    try 
+	                    {
+	                    	System.out.println();
+		                    System.out.println("-----------------------------------------------------------------------------------------------");
+		                    System.out.println();
+		                    System.out.println("1: Get Membership | 2: Log in | 3: Exit");
+	                        choice = sc.nextInt();
+	                        sc.nextLine();
+	                    } catch (InputMismatchException e) 
+	                    {
+	                        System.out.println("Enter valid input.");
+	                        sc.nextLine();
+	                    }
+	                    switch(choice)
+	                    {
+	                    	case 1 : //get membership
+	                    		try 
+    		            		{
+                        			System.out.println("Enter member name : ");
+                        			String name = sc.nextLine();
+                        			String email = returnEmailId(sc);
+                        			String phone = String.valueOf(returnPhone(sc));
+                        			System.out.println("Enter member address : ");
+                        			String address = sc.nextLine();
+                        			System.out.println("Enter password (i.e it is imp dont forget) : ");
+                        			String password = sc.nextLine();
+                        			int balance = returnBalance(sc);
+                        			sc.nextLine();
+                        			memberObj.addMembership(name, email, phone, address, password, balance);
+    		            		}catch (InputMismatchException e) 
+    			                {
+    			                    System.out.println("Enter valid input.");
+    			                    sc.nextLine();
+    			                }
+	                    		
+	                    		break;
+	                    	case 2 : // Log in
+	                    		int memberId = 0;
+	                    		try 
+	        	                {
+	        	            		System.out.println("Enter Member id : ");
+	        	            		memberId = sc.nextInt();
+	        	            		sc.nextLine();
+	        	            		System.out.println("Enter Member Password : ");
+	        	            		String memberPassword = sc.nextLine();
+	        	            		
+	        	            		memberObj.login(memberId, memberPassword);
+	        	            		
+	        	                } catch (InputMismatchException e) 
+	        	                {
+	        	                    System.out.println("Enter valid input.");
+	        	                    sc.nextLine();
+	        	                }
+	        	            	
+	        	            	Member.AuthenticatedActions action = memberObj.getAuthenticatedActions();
+	        	            	
+	        	            	if(action != null)
+	        	            	{
+	        	            		boolean userActionFlag = true;
+	        	            		while(userActionFlag)
+	        	            		{
+	        	            			try 
+	        		                    {
+	        		                    	System.out.println();
+	        			                    System.out.println("-----------------------------------------------------------------------------------------------");
+	        			                    System.out.println();
+	        			                    System.out.println("1: My details | 2: Available books  | 3: Borrow book | 4: Return Book | 5: Renew Book"
+	        			                    		+ "\n6: Lost Book | 7: Search book | 8: Update details | 9: Loan History | 10: Cancel Membership"
+	        			                    		+ "\n11 : Exit");
+	        		                        choice = sc.nextInt();
+	        		                        sc.nextLine();
+	        		                    } catch (InputMismatchException e) 
+	        		                    {
+	        		                        System.out.println("Enter valid input.");
+	        		                        sc.nextLine();
+	        		                    }
+	        	            		 switch(choice)
+	        	            		 {
+	        	            		 	case 1 : // my details
+	        	            		 		action.displayMemberById(memberId);
+	        	            		 		break;
+
+	        	            		 	case 2 : // available books
+	        	            		 		action.listAvailableBooks();
+	        	            		 		break;
+
+	        	            		 	case 3 : // borrow books
+	        	            		 		try 
+	        	        	                {
+	        	        	            		System.out.println("Enter book id : ");
+	        	        	            		int bookId = sc.nextInt();
+	        	        	            		sc.nextLine();
+	        	        	            		
+	        	        	            		action.borrowBook(bookId, memberId);
+	        	        	            		
+	        	        	                } catch (InputMismatchException e) 
+	        	        	                {
+	        	        	                    System.out.println("Enter valid input.");
+	        	        	                    sc.nextLine();
+	        	        	                }
+	        	            		 		break;
+
+	        	            		 	case 4 :// return book
+	        	            		 		try 
+	        	        	                {
+	        	        	            		System.out.println("Enter book copy id : ");
+	        	        	            		int copyId = sc.nextInt();
+	        	        	            		sc.nextLine();
+	        	        	            		
+	        	        	            		action.returnBook(copyId, memberId);
+	        	        	            		
+	        	        	                } catch (InputMismatchException e) 
+	        	        	                {
+	        	        	                    System.out.println("Enter valid input.");
+	        	        	                    sc.nextLine();
+	        	        	                }
+	        	            		 		break;
+
+	        	            		 	case 5 : //renew book
+	        	            		 		try 
+	        	        	                {
+	        	        	            		System.out.println("Enter book copy id : ");
+	        	        	            		int copyId = sc.nextInt();
+	        	        	            		sc.nextLine();
+	        	        	            		
+	        	        	            		action.renewBook(copyId, memberId);
+	        	        	            		
+	        	        	                } catch (InputMismatchException e) 
+	        	        	                {
+	        	        	                    System.out.println("Enter valid input.");
+	        	        	                    sc.nextLine();
+	        	        	                }
+	        	            		 		break;
+
+	        	            		 	case 6 : // lost book
+	        	            		 		try 
+	        	        	                {
+	        	        	            		System.out.println("Enter book copy id : ");
+	        	        	            		int copyId = sc.nextInt();
+	        	        	            		sc.nextLine();
+	        	        	            		
+	        	        	            		action.reportBookLost(copyId, memberId);
+	        	        	            		
+	        	        	                } catch (InputMismatchException e) 
+	        	        	                {
+	        	        	                    System.out.println("Enter valid input.");
+	        	        	                    sc.nextLine();
+	        	        	                }
+	        	            		 		break;
+
+	        	            		 	case 7 : // search book
+	        	            		 		boolean searchFlag = true;
+	        	            		 		while(searchFlag)
+	        	            		 		{
+	        	            		 			try 
+	    	        		                    {
+	    	        		                    	System.out.println();
+	    	        			                    System.out.println("-----------------------------------------------------------------------------------------------");
+	    	        			                    System.out.println();
+	    	        			                    System.out.println("1: By title | 2: By author  | 3: By genre | 4: Exit");
+	    	        		                        choice = sc.nextInt();
+	    	        		                        sc.nextLine();
+	    	        		                    } catch (InputMismatchException e) 
+	    	        		                    {
+	    	        		                        System.out.println("Enter valid input.");
+	    	        		                        sc.nextLine();
+	    	        		                    }
+	        	            		 			switch(choice)
+	        	            		 			{
+	        	            		 				case 1 :// by title
+	        	            		 					try 
+	    	    	        		                    {
+	    	    	        		                    	System.out.println("Enter title :");
+	    	    	        		                        String title = sc.nextLine();
+	    	    	        		                        action.searchBookByTitle(title);
+	    	    	        		                    } catch (InputMismatchException e) 
+	    	    	        		                    {
+	    	    	        		                        System.out.println("Enter valid input.");
+	    	    	        		                    }
+	        	            		 					break;
+
+	        	            		 				case 2 :// by author
+	        	            		 					try 
+	    	    	        		                    {
+	    	    	        		                    	System.out.println("Enter author :");
+	    	    	        		                        String author = sc.nextLine();
+	    	    	        		                        action.searchBookByAuthor(author);
+	    	    	        		                    } catch (InputMismatchException e) 
+	    	    	        		                    {
+	    	    	        		                        System.out.println("Enter valid input.");
+	    	    	        		                    }
+	        	            		 					break;
+
+	        	            		 				case 3 : // by genre
+	        	            		 					try 
+	    	    	        		                    {
+	    	    	        		                    	System.out.println("Enter genre :");
+	    	    	        		                        String genre = sc.nextLine();
+	    	    	        		                        action.searchBookByGenre(genre);
+	    	    	        		                    } catch (InputMismatchException e) 
+	    	    	        		                    {
+	    	    	        		                        System.out.println("Enter valid input.");
+	    	    	        		                    }
+	        	            		 					break;
+
+	        	            		 				case 4 : //exit
+	        	            		 					searchFlag = false;
+	        	            		 					break;
+	        	            		 					
+	        	            		 				default :
+	        	            		 					System.out.println("Enter choice from above options.");
+	        	            		 			}// search switch ends here
+	        	            		 		}// search while loop ends here
+	        	            		 		break;
+
+	        	            		 	case 8 : // update details
+	        	            		 		boolean updateFlag = true;
+	        	            		 		while(updateFlag)
+	        	            		 		{
+	        	            		 			try 
+	    	        		                    {
+	    	        		                    	System.out.println();
+	    	        			                    System.out.println("-----------------------------------------------------------------------------------------------");
+	    	        			                    System.out.println();
+	    	        			                    System.out.println("1: Name | 2: Email  | 3: Phone | 4: Address"
+	    	        			                    		+ "5: Add balance | 6: Change password  | 7: Exit");
+	    	        		                        choice = sc.nextInt();
+	    	        		                        sc.nextLine();
+	    	        		                    } catch (InputMismatchException e) 
+	    	        		                    {
+	    	        		                        System.out.println("Enter valid input.");
+	    	        		                        sc.nextLine();
+	    	        		                    }
+	        	            		 			
+	        	            		 			switch(choice)
+	        	            		 			{
+	        	            		 				case 1:// name
+	        	            		 					try 
+	    	    	        		                    {
+	    	    	        		                    	System.out.println("Enter new name :");
+	    	    	        		                        String newName = sc.nextLine();
+	    	    	        		                        action.updateName(memberId, newName);
+	    	    	        		                    } catch (InputMismatchException e) 
+	    	    	        		                    {
+	    	    	        		                        System.out.println("Enter valid input.");
+	    	    	        		                    }
+	        	            		 					break;
+
+	        	            		 				case 2: // email
+	        	            		 					try 
+	    	    	        		                    {
+	    	    	        		                    	System.out.println("Enter new email :");
+	    	    	        		                        String newEmail = returnEmailId(sc);
+	    	    	        		                        action.updateEmail(memberId, newEmail);
+	    	    	        		                    } catch (InputMismatchException e) 
+	    	    	        		                    {
+	    	    	        		                        System.out.println("Enter valid input.");
+	    	    	        		                    }
+	        	            		 					break;
+
+	        	            		 				case 3: // phone
+	        	            		 					try 
+	    	    	        		                    {
+	    	    	        		                    	System.out.println("Enter new phone no :");
+	    	    	        		                        String newPhoneNo = String.valueOf(returnPhone(sc));
+	    	    	        		                        action.updatePhone(memberId, newPhoneNo);
+	    	    	        		                    } catch (InputMismatchException e) 
+	    	    	        		                    {
+	    	    	        		                        System.out.println("Enter valid input.");
+	    	    	        		                    }
+	        	            		 					break;
+
+	        	            		 				case 4: // address
+	        	            		 					try 
+	    	    	        		                    {
+	    	    	        		                    	System.out.println("Enter new address :");
+	    	    	        		                        String newAddress = sc.nextLine();
+	    	    	        		                        action.updateAddress(memberId, newAddress);
+	    	    	        		                    } catch (InputMismatchException e) 
+	    	    	        		                    {
+	    	    	        		                        System.out.println("Enter valid input.");
+	    	    	        		                    }
+	        	            		 					break;
+
+	        	            		 				case 5: // add balance
+	        	            		 					try 
+	    	    	        		                    {
+	    	    	        		                    	int balance = returnBalance(sc);
+	    	    	        		                    	action.addBalance(memberId, balance);
+	    	    	        		                    } catch (InputMismatchException e) 
+	    	    	        		                    {
+	    	    	        		                        System.out.println("Enter valid input.");
+	    	    	        		                    }
+	        	            		 					break;
+
+	        	            		 				case 6: // change password
+	        	            		 					try 
+	    	    	        		                    {
+	    	    	        		                    	System.out.println("Enter new password :");
+	    	    	        		                        String newPassword = sc.nextLine();
+	    	    	        		                        action.changePassword(memberId, newPassword);
+	    	    	        		                    } catch (InputMismatchException e) 
+	    	    	        		                    {
+	    	    	        		                        System.out.println("Enter valid input.");
+	    	    	        		                    }
+	        	            		 					break;
+
+	        	            		 				case 7:
+	        	            		 					updateFlag = false;
+	        	            		 					break;
+	        	            		 					
+	        	            		 				default :
+	        	            		 					System.out.println("Enter choice from above options.");
+	        	            		 			} // update choice ends here
+	        	            		 		} // update while loop ends here
+	        	            		 		break;
+
+	        	            		 	case 9 : // loan history
+	        	            		 		action.viewLoanHistory(memberId);
+	        	            		 		break;
+
+	        	            		 	case 10 : // cancel membership
+	        	            		 		action.cancelMembership(memberId);
+	        	            		 		break;
+
+	        	            		 	case 11 :
+	        	            		 		userActionFlag = false;
+	        	            		 		break;
+	        	            		 		
+	        	            		 	default :
+	        	            		 		System.out.println("Enter choice from above options.");
+	        	            		 } //action switch ends here
+	        	            		} // user action while loop ends here
+	        	            		 
+	        	            	}// member action is ends here
+	                    		break; //log in case ends here
+	                    		
+	                    	case 3 : //exit
+	                    		userFlag = false;
+	                    		break;
+	                    		
+	                    	default :
+	                    		System.out.println("Enter choice from above options.");
+	                    } // user choice ends here
+	            	}// user while loop ends here
 	            	break;// user case ends here
 	            
 	            
@@ -720,7 +1067,7 @@ public class LibraryApp
         {
             try 
             {
-                System.out.println("Enter initial balance between 1000 to 3000:");
+                System.out.println("Enter balance between 1000 to 3000:");
                 balance = sc.nextInt();
                 sc.nextLine();
                 if(balance > 3000 || balance < 1000)
