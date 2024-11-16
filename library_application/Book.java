@@ -4,7 +4,7 @@ import java.sql.*;
 import java.util.*;
 
 public class Book 
-{  // Changed class name from LibraryDatabase to Book
+{
 
     // JDBC URL, username, and password of MySQL server
     private static final String URL = "jdbc:mysql://localhost:3306/rahul";
@@ -198,6 +198,11 @@ public class Book
                 System.out.printf("%-10s %-30s %-20s %-15s %-15s%n", "Book ID", "Title", "Author", "Genre", "Total Copies");
                 System.out.println("--------------------------------------------------------------------------------------------");
 
+                if (!resultSet.isBeforeFirst()) {
+                    System.out.println("No available books found.");
+                    return;
+                }
+                
                 int recordCount = 0; // count to display record in set
                 // Display each book in table format
                 while (resultSet.next()) {
@@ -205,15 +210,15 @@ public class Book
                     int bookId = resultSet.getInt("book_id");
                     String title = resultSet.getString("title");
                     if (title.length() > 30) {
-                        title = title.substring(0, 30);  // Limit to 30 characters
+                        title = title.substring(0, 27) + "...";  // Limit to 30 characters
                     }
                     String author = resultSet.getString("author");
                     if (author.length() > 20) {
-                        author = author.substring(0, 20);  // Limit to 20 characters
+                        author = author.substring(0, 17) + "...";  // Limit to 20 characters
                     }
                     String genre = resultSet.getString("genre");
                     if (genre.length() > 15) {
-                        genre = genre.substring(0, 15);  // Limit to 15 characters
+                        genre = genre.substring(0, 12) + "...";  // Limit to 15 characters
                     }
                     int totalCopies = resultSet.getInt("total_copies");
 
@@ -259,6 +264,11 @@ public class Book
             statement.setInt(1, book_id);
 
             ResultSet resultSet = statement.executeQuery();
+            
+            if (!resultSet.isBeforeFirst()) {
+                System.out.println("No available copies found.");
+                return;
+            }
             	System.out.println();
                 // Display table header
                 System.out.printf("%-10s %-20s%n", "Copy ID", "Status");
@@ -315,15 +325,18 @@ public class Book
             PreparedStatement bookStatement = connection.prepareStatement(bookDetailsSQL);
             bookStatement.setInt(1, bookId);
             ResultSet bookResultSet = bookStatement.executeQuery();
+            
 
             if (bookResultSet.next()) {
                 // Display basic book details
-                System.out.println("\nBook Details:");
-                System.out.printf("Book ID: %d\n", bookResultSet.getInt("book_id"));
-                System.out.printf("Title: %s\n", bookResultSet.getString("title"));
-                System.out.printf("Author: %s\n", bookResultSet.getString("author"));
-                System.out.printf("Genre: %s\n", bookResultSet.getString("genre"));
-                System.out.printf("Total Copies: %d\n", bookResultSet.getInt("total_copies"));
+            	System.out.println(
+            		    "Book ID: " + bookResultSet.getInt("book_id")
+            		    + " | Title: " + bookResultSet.getString("title")
+            		    + " | Author: " + bookResultSet.getString("author")
+            		    + " | Genre: " + bookResultSet.getString("genre")
+            		    + " | Total Copies: " + bookResultSet.getInt("total_copies")
+            		);
+
 
               
                 // Query to count available copies for the specific book
@@ -336,7 +349,7 @@ public class Book
 
                 if (availabilityResultSet.next()) {
                     int availableCopies = availabilityResultSet.getInt("available_count");
-                    System.out.printf("Available Copies: %d\n", availableCopies);
+                    System.out.printf("| Available Copies: %d", availableCopies);
                 } else {
                     System.out.println("No copies available for this book.");
                 }
@@ -388,15 +401,15 @@ public class Book
                 int bookId = resultSet.getInt("book_id");
                 String title = resultSet.getString("title");
                 if (title.length() > 30) {
-                    title = title.substring(0, 30);  // Limit to 30 characters
+                    title = title.substring(0, 27) + "...";  // Limit to 30 characters
                 }
                 String author = resultSet.getString("author");
                 if (author.length() > 20) {
-                    author = author.substring(0, 20);  // Limit to 20 characters
+                    author = author.substring(0, 17) + "...";  // Limit to 20 characters
                 }
                 String genre = resultSet.getString("genre");
                 if (genre.length() > 15) {
-                    genre = genre.substring(0, 15);  // Limit to 15 characters
+                    genre = genre.substring(0, 12) + "...";  // Limit to 15 characters
                 }
                 int totalCopies = resultSet.getInt("total_copies");
 
@@ -447,15 +460,15 @@ public class Book
                 int bookId = resultSet.getInt("book_id");
                 String title = resultSet.getString("title");
                 if (title.length() > 30) {
-                    title = title.substring(0, 30);  // Limit to 30 characters
+                    title = title.substring(0, 27) + "...";  // Limit to 30 characters
                 }
                 String author = resultSet.getString("author");
                 if (author.length() > 20) {
-                    author = author.substring(0, 20);  // Limit to 20 characters
+                    author = author.substring(0, 17) + "...";  // Limit to 20 characters
                 }
                 String genre = resultSet.getString("genre");
                 if (genre.length() > 15) {
-                    genre = genre.substring(0, 15);  // Limit to 15 characters
+                    genre = genre.substring(0, 12) + "...";  // Limit to 15 characters
                 }
                 int totalCopies = resultSet.getInt("total_copies");
 
@@ -521,15 +534,15 @@ public class Book
                 int bookId = resultSet.getInt("book_id");
                 String title = resultSet.getString("title");
                 if (title.length() > 30) {
-                    title = title.substring(0, 30); // Limit to 30 characters
+                    title = title.substring(0, 27) + "..."; // Limit to 30 characters
                 }
                 String author = resultSet.getString("author");
                 if (author.length() > 20) {
-                    author = author.substring(0, 20); // Limit to 20 characters
+                    author = author.substring(0, 17) + "..."; // Limit to 20 characters
                 }
                 String genre = resultSet.getString("genre");
                 if (genre.length() > 15) {
-                    genre = genre.substring(0, 15); // Limit to 15 characters
+                    genre = genre.substring(0, 12) + "..."; // Limit to 15 characters
                 }
                 int totalCopies = resultSet.getInt("total_copies");
 
@@ -600,15 +613,15 @@ public class Book
                 int bookId = resultSet.getInt("book_id");
                 String title = resultSet.getString("title");
                 if (title.length() > 30) {
-                    title = title.substring(0, 30);  // Limit to 30 characters
+                    title = title.substring(0, 27) + "...";  // Limit to 30 characters
                 }
                 String author = resultSet.getString("author");
                 if (author.length() > 20) {
-                    author = author.substring(0, 20);  // Limit to 20 characters
+                    author = author.substring(0, 17) + "...";  // Limit to 20 characters
                 }
                 String genre = resultSet.getString("genre");
                 if (genre.length() > 15) {
-                    genre = genre.substring(0, 15);  // Limit to 15 characters
+                    genre = genre.substring(0, 12) + "...";  // Limit to 15 characters
                 }
                 int totalCopies = resultSet.getInt("total_copies");
 
@@ -642,7 +655,7 @@ public class Book
     }
     
     // add copies to existing book
-    public static void addCopy(int bookId, int numberOfCopies) {
+    public static void addCopies(int bookId, int numberOfCopies) {
         try {
             // Establish the connection to the database
             connection = DriverManager.getConnection(URL, USER, PASSWORD);
@@ -836,8 +849,11 @@ public class Book
         }
     }
     
-    // add member 
-    public static void addMember(String name, String email, String phone, String address, String password) {
+ // Add member
+    public static void addMember(String name, String email, String phone, String address, String password, int balance) {
+        Connection connection = null;
+        PreparedStatement statement = null;
+
         try {
             connection = DriverManager.getConnection(URL, USER, PASSWORD);
 
@@ -845,19 +861,21 @@ public class Book
                 System.out.println("Error: Same email already exists.");
                 return;
             }
-            
+
             if (isPhoneExists(phone)) {
                 System.out.println("Error: Same phone number already exists.");
                 return;
             }
 
-            String insertMemberSQL = "INSERT INTO members (name, email, phone, address, password) VALUES (?, ?, ?, ?, ?)";
-            PreparedStatement statement = connection.prepareStatement(insertMemberSQL, Statement.RETURN_GENERATED_KEYS);
+            // SQL query to insert a new member 
+            String insertMemberSQL = "INSERT INTO members (name, email, phone, address, password, balance) VALUES (?, ?, ?, ?, ?, ?)";
+            statement = connection.prepareStatement(insertMemberSQL, Statement.RETURN_GENERATED_KEYS);
             statement.setString(1, name);
             statement.setString(2, email);
             statement.setString(3, phone);
             statement.setString(4, address);
             statement.setString(5, password);
+            statement.setInt(6, balance); 
 
             int rowsAffected = statement.executeUpdate();
 
@@ -873,13 +891,16 @@ public class Book
         } catch (SQLException e) {
             e.printStackTrace();
         } finally {
+            // Close resources
             try {
+                if (statement != null) statement.close();
                 if (connection != null) connection.close();
             } catch (SQLException e) {
                 e.printStackTrace();
             }
         }
     }
+
 
     // methos to check if email exists
     private static boolean isEmailExists(String email) {
@@ -944,6 +965,144 @@ public class Book
                 if (connection != null) {
                     connection.close(); // Close the Connection
                 }
+            } catch (SQLException e) {
+                e.printStackTrace();
+            }
+        }
+    }
+    
+ // update member name
+    public static void updateName(int memberId, String newName)
+    {
+    	PreparedStatement updateNameStatement = null;
+    	try {
+    		connection = DriverManager.getConnection(URL, USER, PASSWORD);
+    		
+    		//write sql query to update name
+    		String updateNameSql = "UPDATE MEMBERS SET name = ? WHERE member_id = ?";
+    		updateNameStatement = connection.prepareStatement(updateNameSql);
+    		updateNameStatement.setString(1, newName);
+    		updateNameStatement.setInt(2, memberId);
+    		
+    		int updateCount = updateNameStatement.executeUpdate();
+    		
+    		if(updateCount > 0){
+    			System.out.println("Name updated succefully.");
+    		}
+    		else {
+    			System.out.println("No member found to update the name.");
+    		}
+    		
+    	}catch (SQLException e) {
+            e.printStackTrace();
+        } finally {
+            // Close resources
+            try {
+                if (updateNameStatement != null) updateNameStatement.close();
+                if (connection != null) connection.close();
+            } catch (SQLException e) {
+                e.printStackTrace();
+            }
+        }
+    }
+    
+    // update member email
+    public static void updateEmail(int memberId, String newEmail)
+    {
+    	PreparedStatement updateEmailStatement = null;
+    	try {
+    		connection = DriverManager.getConnection(URL, USER, PASSWORD);
+    		
+    		//write sql query to update email
+    		String updateEmailSql = "UPDATE MEMBERS SET email = ? WHERE member_id = ?";
+    		updateEmailStatement = connection.prepareStatement(updateEmailSql);
+    		updateEmailStatement.setString(1, newEmail);
+    		updateEmailStatement.setInt(2, memberId);
+    		
+    		int updateCount = updateEmailStatement.executeUpdate();
+    		
+    		if(updateCount > 0){
+    			System.out.println("Email updated succefully.");
+    		}
+    		else {
+    			System.out.println("No member found to update the email.");
+    		}
+    		
+    	}catch (SQLException e) {
+            e.printStackTrace();
+        } finally {
+            // Close resources
+            try {
+                if (updateEmailStatement != null) updateEmailStatement.close();
+                if (connection != null) connection.close();
+            } catch (SQLException e) {
+                e.printStackTrace();
+            }
+        }
+    }
+    
+    // update member phone
+    public static void updatePhone(int memberId, String newPhone)
+    {
+    	PreparedStatement updatePhoneStatement = null;
+    	try {
+    		connection = DriverManager.getConnection(URL, USER, PASSWORD);
+    		
+    		//write sql query to update phone
+    		String updatePhoneSql = "UPDATE MEMBERS SET phone = ? WHERE member_id = ?";
+    		updatePhoneStatement = connection.prepareStatement(updatePhoneSql);
+    		updatePhoneStatement.setString(1, newPhone);
+    		updatePhoneStatement.setInt(2, memberId);
+    		
+    		int updateCount = updatePhoneStatement.executeUpdate();
+    		
+    		if(updateCount > 0){
+    			System.out.println("Phone no updated succefully.");
+    		}
+    		else {
+    			System.out.println("No member found to update the phone no.");
+    		}
+    		
+    	}catch (SQLException e) {
+            e.printStackTrace();
+        } finally {
+            // Close resources
+            try {
+                if (updatePhoneStatement != null) updatePhoneStatement.close();
+                if (connection != null) connection.close();
+            } catch (SQLException e) {
+                e.printStackTrace();
+            }
+        }
+    }
+    
+    //update member address
+    public static void updateAddress(int memberId, String newAddress) {
+        PreparedStatement updateAddressStatement = null;
+        try {
+            connection = DriverManager.getConnection(URL, USER, PASSWORD);
+
+            // SQL query to update address
+            String updateAddressSql = "UPDATE MEMBERS SET address = ? WHERE member_id = ?";
+            updateAddressStatement = connection.prepareStatement(updateAddressSql);
+            updateAddressStatement.setString(1, newAddress);
+            updateAddressStatement.setInt(2, memberId);
+
+            int updateCount = updateAddressStatement.executeUpdate();
+
+            if (updateCount > 0) {
+                System.out.println("Address updated successfully.");
+            } else {
+                System.out.println("No member found to update the address.");
+            }
+
+        } catch (SQLException e) {
+            e.printStackTrace();
+        } finally {
+            // Close resources
+            try {
+                if (updateAddressStatement != null) updateAddressStatement.close();
+                if (connection != null) connection.close();
             } catch (SQLException e) {
                 e.printStackTrace();
             }
