@@ -410,8 +410,10 @@ public class Admin
 	                return;
 	            }
 
+	            int recordCount = 0;
 	            // Display each loan record in table format
 	            while (resultSet.next()) {
+	            	recordCount++;
 	                int loanId = resultSet.getInt("loan_id");
 	                String bookTitle = resultSet.getString("book_title");
 	                if (bookTitle.length() > 30) {
@@ -429,6 +431,21 @@ public class Admin
 	                System.out.printf("%-10d %-30s %-20s %-15s %-15s %-20s %-15s%n", 
 	                                  loanId, bookTitle, memberName, borrowDate, returnDate, 
 	                                  expectedReturnDate, status);
+	                
+	             // Check if 10 records have been displayed and there are more records left
+	                if (recordCount == 10 && !resultSet.isLast()) {
+	                		System.out.println();
+	                    	System.out.println("Enter 'next' If you want to see next set of history or enter anything to exit");
+	                    	String choice = sc.nextLine();
+	                    	if(choice.equalsIgnoreCase("next"))
+	                    	{
+	                    		recordCount = 0;
+	                    	}
+	                    	else
+	                    	{
+	                    		break;
+	                    	}
+	                    }
 	            }
 
 	        } catch (SQLException e) {
@@ -1127,7 +1144,7 @@ public class Admin
 	    }
 
 	    // Method to display the total number of books borrowed (including returned books)
-	    public void displayTotalBooksBorrowed() {
+	    public void displayTotalBooksLoaned() {
 	        try {
 	            connection = DriverManager.getConnection(URL, USER, PASSWORD);
 
@@ -1157,55 +1174,47 @@ public class Admin
 	            }
 	        }
 	    }
+	    
+	    // method to count borrowed books that are not returned
+	    public void countBorrowedBooks() {
+	        PreparedStatement statement = null;
+	        ResultSet resultSet = null;
 
-	    // Method to display the loan history for all books
-	    public void displayLoanHistory() {
 	        try {
+	            // Establish the connection to the database
 	            connection = DriverManager.getConnection(URL, USER, PASSWORD);
 
-	            // Query to get the loan history for all books
-	            String selectLoanHistorySQL = 
-	                "SELECT lh.loan_id, b.title, lh.borrow_date, lh.return_date, lh.status " +
-	                "FROM loanhistory lh " +
-	                "JOIN copies c ON lh.copy_id = c.copy_id " +
-	                "JOIN books b ON c.book_id = b.book_id";
+	            // SQL query to count the number of borrowed books
+	            String countBorrowedBooksSQL = 
+	                "SELECT COUNT(*) AS borrowed_count " +
+	                "FROM loanhistory " +
+	                "WHERE status = 'borrowed'";
 
-	            PreparedStatement statement = connection.prepareStatement(selectLoanHistorySQL);
-	            ResultSet resultSet = statement.executeQuery();
+	            statement = connection.prepareStatement(countBorrowedBooksSQL);
+	            resultSet = statement.executeQuery();
 
-	            // Display table header
-	            System.out.println();
-	            System.out.printf("%-10s %-30s %-15s %-15s %-10s%n", "Loan ID", "Book Title", "Borrow Date", "Return Date", "Status");
-	            System.out.println("--------------------------------------------------------------------------");
-
-	            if (!resultSet.isBeforeFirst()) {
-	                System.out.println("No loan history found.");
-	                return;
-	            }
-
-	            // Display loan history
-	            while (resultSet.next()) {
-	                int loanId = resultSet.getInt("loan_id");
-	                String bookTitle = resultSet.getString("title");
-	                Date borrowDate = resultSet.getDate("borrow_date");
-	                Date returnDate = resultSet.getDate("return_date");
-	                String status = resultSet.getString("status");
-
-	                System.out.printf("%-10d %-30s %-15s %-15s %-10s%n", loanId, bookTitle, borrowDate, returnDate, status);
+	            if (resultSet.next()) {
+	                int borrowedCount = resultSet.getInt("borrowed_count");
+	                System.out.println("Number of books currently borrowed and not returned: " + borrowedCount);
+	            } else {
+	                System.out.println("No borrowed books found.");
 	            }
 
 	        } catch (SQLException e) {
 	            e.printStackTrace();
 	        } finally {
 	            try {
-	                if (connection != null) {
-	                    connection.close();
-	                }
+	                if (resultSet != null) resultSet.close();
+	                if (statement != null) statement.close();
+	                if (connection != null) connection.close();
 	            } catch (SQLException e) {
 	                e.printStackTrace();
 	            }
 	        }
 	    }
+
+
+	    
 	    
 	    // view loan history by member id
 	    public void viewLoanHistoryByMemberId(int memberId) {
@@ -1756,8 +1765,58 @@ public class Admin
 	            }
 	        }
 	    }
+	    
+	    public void addBalance(int memberId, int newBalance)
+	    {
+	    	ResultSet resultSet =null;
+	    	PreparedStatement balanceStatement = null;
+	    	PreparedStatement fetchStatement = null;
+	    	
+	    	try {
+	    		connection = DriverManager.getConnection(URL, USER, PASSWORD);
+	    		
+	    		String fetchBalance = "SELECT balance FROM members WHERE member_id = ?";
+	    		fetchStatement = connection.prepareStatement(fetchBalance);
+	    		fetchStatement.setInt(1, memberId);
+	    		resultSet = fetchStatement.executeQuery();
+	    		
+	    		if(!resultSet.next()) {
+	    			System.out.println("No member found with member id : "+memberId);
+	    		}
+	    		int balance = resultSet.getInt("balance");
+	    		
+	    		int updatedBalance = balance + newBalance;
+	    		if(updatedBalance > 3000) {
+	    			System.out.println("Your old Balance is : "+balance +"\nSo you cannot add more balance than "+(3000 - balance));
+	    			System.out.println("It's our Policy. Thank you");
+	    			return;
+	    		}
+	    		
+	    		String updateBalance ="UPDATE members SET balance = ? WHERE member_id = ?";
+	    		balanceStatement = connection.prepareStatement(updateBalance);
+	    		balanceStatement.setInt(1, updatedBalance);
+	    		balanceStatement.setInt(2, memberId);
+	    		
+	    		int checkUpdate = balanceStatement.executeUpdate();
+	    		if(checkUpdate > 0) {
+	    			System.out.println("Balance added successfully. New Balance : "+updatedBalance);
+	    		}
+	    	}catch (SQLException e) {
+	            e.printStackTrace();
+	        } finally {
+	            // Close resources
+	            try {
+	                if (balanceStatement != null) balanceStatement.close();
+	                if (fetchStatement != null) fetchStatement.close();
+	                if (resultSet != null) resultSet.close();
+	                if (connection != null) connection.close();
+	            } catch (SQLException e) {
+	                e.printStackTrace();
+	            }
+	        }
+	    }
 
-   }
+   }// authentication class ends here
  
 
-}
+} // admin class ends here
