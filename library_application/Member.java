@@ -7,12 +7,12 @@ import java.time.*;
 import java.time.temporal.ChronoUnit;
 
 public class Member {
-	// JDBC URL, username, and password of MySQL server
+	// JDBC URL, user name, and password of MySQL server
     private static final String URL = "jdbc:mysql://localhost:3306/rahul";
     private static final String USER = "root";
     private static final String PASSWORD = "root";
 
-    // JDBC variables for opening, closing, and managing the connection
+    // JDBC variable connection
     private static Connection connection;
     static Scanner sc = new Scanner(System.in);
     
@@ -342,7 +342,6 @@ public class Member {
                 return;
             }
 
-            //get copy id
             int copyId = resultSet.getInt("copy_id");
 
             // Update the status of the copy to 'borrowed'
@@ -599,7 +598,7 @@ public class Member {
     	try {
     		connection = DriverManager.getConnection(URL, USER, PASSWORD);
     		
-    		//query to update name
+    		//write sql query to update name
     		String updateNameSql = "UPDATE MEMBERS SET name = ? WHERE member_id = ?";
     		updateNameStatement = connection.prepareStatement(updateNameSql);
     		updateNameStatement.setString(1, newName);
@@ -634,7 +633,7 @@ public class Member {
     	try {
     		connection = DriverManager.getConnection(URL, USER, PASSWORD);
     		
-    		//query to update email
+    		//write sql query to update email
     		String updateEmailSql = "UPDATE MEMBERS SET email = ? WHERE member_id = ?";
     		updateEmailStatement = connection.prepareStatement(updateEmailSql);
     		updateEmailStatement.setString(1, newEmail);
@@ -669,7 +668,7 @@ public class Member {
     	try {
     		connection = DriverManager.getConnection(URL, USER, PASSWORD);
     		
-    		//update phone
+    		//write sql query to update phone
     		String updatePhoneSql = "UPDATE MEMBERS SET phone = ? WHERE member_id = ?";
     		updatePhoneStatement = connection.prepareStatement(updatePhoneSql);
     		updatePhoneStatement.setString(1, newPhone);
@@ -703,7 +702,7 @@ public class Member {
         try {
             connection = DriverManager.getConnection(URL, USER, PASSWORD);
 
-            // update address
+            // SQL query to update address
             String updateAddressSql = "UPDATE MEMBERS SET address = ? WHERE member_id = ?";
             updateAddressStatement = connection.prepareStatement(updateAddressSql);
             updateAddressStatement.setString(1, newAddress);
@@ -736,7 +735,7 @@ public class Member {
         try {
             connection = DriverManager.getConnection(URL, USER, PASSWORD);
 
-            // update password
+            // SQL query to update password
             String changePasswordSql = "UPDATE MEMBERS SET password = ? WHERE member_id = ?";
             changePasswordStatement = connection.prepareStatement(changePasswordSql);
             changePasswordStatement.setString(1, newPassword);
@@ -763,16 +762,66 @@ public class Member {
         }
     }
     
+    // add balance
+    public static void addBalance(int memberId, int newBalance)
+    {
+    	ResultSet resultSet =null;
+    	PreparedStatement balanceStatement = null;
+    	PreparedStatement fetchStatement = null;
+    	
+    	try {
+    		connection = DriverManager.getConnection(URL, USER, PASSWORD);
+    		
+    		String fetchBalance = "SELECT balance FROM members WHERE member_id = ?";
+    		fetchStatement = connection.prepareStatement(fetchBalance);
+    		fetchStatement.setInt(1, memberId);
+    		resultSet = fetchStatement.executeQuery();
+    		
+    		if(!resultSet.next()) {
+    			System.out.println("No member found with member id : "+memberId);
+    		}
+    		int balance = resultSet.getInt("balance");
+    		
+    		int updatedBalance = balance + newBalance;
+    		if(updatedBalance > 3000) {
+    			System.out.println("Your old Balance is : "+balance +"\nSo you cannot add more balance than "+(3000 - balance));
+    			System.out.println("It's our Policy. Thank you");
+    			return;
+    		}
+    		
+    		String updateBalance ="UPDATE members SET balance = ? WHERE member_id = ?";
+    		balanceStatement = connection.prepareStatement(updateBalance);
+    		balanceStatement.setInt(1, updatedBalance);
+    		balanceStatement.setInt(2, memberId);
+    		
+    		int checkUpdate = balanceStatement.executeUpdate();
+    		if(checkUpdate > 0) {
+    			System.out.println("Balance added successfully. New Balance : "+updatedBalance);
+    		}
+    	}catch (SQLException e) {
+            e.printStackTrace();
+        } finally {
+            // Close resources
+            try {
+                if (balanceStatement != null) balanceStatement.close();
+                if (fetchStatement != null) fetchStatement.close();
+                if (resultSet != null) resultSet.close();
+                if (connection != null) connection.close();
+            } catch (SQLException e) {
+                e.printStackTrace();
+            }
+        }
+    }
+    
     // view loan history
     public static void viewLoanHistory(int memberId) {
-        Connection connection = null;
         PreparedStatement loanHistoryStatement = null;
         ResultSet resultSet = null;
 
         try {
             connection = DriverManager.getConnection(URL, USER, PASSWORD);
 
-            // fetch loan history for the member
+            // query to fetch loan history for the member
             String loanHistorySql = "SELECT l.loan_id, c.copy_id, b.title, l.borrow_date, l.expected_return_date, l.return_date, l.status " +
                                     "FROM loanhistory l " +
                                     "JOIN copies c ON l.copy_id = c.copy_id " +
@@ -790,7 +839,9 @@ public class Member {
             System.out.println("-------------------------------------------------------------------------------------------------------------");
 
             boolean hasHistory = false;
+            int recordCount = 0;
             while (resultSet.next()) {
+            	recordCount++;
                 hasHistory = true;
                 int loanId = resultSet.getInt("loan_id");
                 int copyId = resultSet.getInt("copy_id");
@@ -806,6 +857,20 @@ public class Member {
                 System.out.printf("%-10d %-10d %-30s %-15s %-20s %-15s %-15s\n", 
                                   loanId, copyId, title, borrowDate, dueDate, 
                                   (returnDate != null ? returnDate : "Not Returned"), status);
+             // Check if 10 records have been displayed and there are more records left
+                if (recordCount == 10 && !resultSet.isLast()) {
+                		System.out.println();
+                    	System.out.println("Enter 'next' If you want to see next set of history or enter anything to exit");
+                    	String choice = sc.nextLine();
+                    	if(choice.equalsIgnoreCase("next"))
+                    	{
+                    		recordCount = 0;
+                    	}
+                    	else
+                    	{
+                    		break;
+                    	}
+                    }
             }
 
             if (!hasHistory) {
@@ -824,5 +889,5 @@ public class Member {
                 e.printStackTrace();
             }
         }
-    }  
+    }    
 }
