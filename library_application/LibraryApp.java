@@ -87,7 +87,7 @@ public class LibraryApp
 		    	                        System.out.println();
 		    	                        System.out.println("1 : Add book | 2: Add copies | 3: Delete book | 4: Delete copy | 5 : Display books"
 		    	                                            + "\n6: Display copies  | 7: Search | 8: Update |  9 : View book details by id (including total available copies)"
-		    	                        					+ "10 : Exit");
+		    	                        					+ "\n10 : View Available books | 11: Exit");
 		    	                        try 
 		    		            		{
 		    		            			choice = sc.nextInt();
@@ -395,8 +395,12 @@ public class LibraryApp
 				    			                    sc.nextLine();
 				    			                }
 		    	                        		break;
+		    	                        		
+		    	                        	case 10 :
+		    	                        		actions.listAvailableBooks();
+		    	                        		break;
 
-		    	                        	case 10 : // exit
+		    	                        	case 11 : // exit
 		    	                        		bookFlag = false;
 		    	                        		break;
 		    	                        		
@@ -615,7 +619,70 @@ public class LibraryApp
 		            				
 		            			// Loan
 		            			case 3 :
-		            				
+		            				boolean loanFlag = true;
+		            				while(loanFlag)
+		            				{
+		            					System.out.println();
+		    	                        System.out.println("-----------------------------------------------------------------------------------------------");
+		    	                        System.out.println();
+		    	                        System.out.println("1 : Loan history | 2: Loan History of a member | 3: Popular Book | 4: Popular Genre "
+		    	                        		+ "\n5: Total books borrowed | 6: Total books Loaned | 7: Exit");
+		    	                        try 
+		    		            		{
+		    		            			choice = sc.nextInt();
+		    		            			sc.nextLine();
+		    		            		}catch (InputMismatchException e) 
+		    			                {
+		    			                    System.out.println("Enter valid input.");
+		    			                    sc.nextLine();
+		    			                }
+		    	                        
+		    	                        switch(choice)
+		    	                        {
+		    	                        	case 1 : //loan history
+		    	                        		actions.viewLoanHistory();
+		    	                        		break;
+
+		    	                        	case 2 : //loan history of member
+		    	                        		try 
+				    		            		{
+		    	                        			System.out.println("Enter member Id : ");
+				    		            			int memberId = sc.nextInt();
+				    		            			sc.nextLine();
+				    		            			actions.viewLoanHistoryByMemberId(memberId);
+				    		            		}catch (InputMismatchException e) 
+				    			                {
+				    			                    System.out.println("Enter valid input.");
+				    			                    sc.nextLine();
+				    			                }
+		    	                        		break;
+
+		    	                        	case 3 : // popular books
+		    	                        		actions.displayMostBorrowedBooks();
+		    	                        		break;
+
+		    	                        	case 4 : // popular genre
+		    	                        		actions.displayMostPopularGenres();
+		    	                        		break;
+
+		    	                        	case 5 : // total borowed book that are not returned
+		    	                        		actions.countBorrowedBooks();
+		    	                        		break;
+
+		    	                        	case 6 : // total books loaned till now
+		    	                        		actions.displayTotalBooksLoaned();
+		    	                        		break;
+
+		    	                        	case 7 :
+		    	                        		loanFlag = false;
+		    	                        		break;
+		    	                        		
+		    	                        	default :
+		    	                        		System.out.println("Enter choice from above options.");
+		    	                        
+		    	                        }
+		    	                        
+		            				}// loan while loop ends here
 		            				break; // loan case ends here
 		            				
 		            			case 4 :
