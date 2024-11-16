@@ -6,18 +6,86 @@ import java.util.*;
 import java.time.*;
 import java.time.temporal.ChronoUnit;
 
-public class Member {
-	// JDBC URL, user name, and password of MySQL server
-    private static final String URL = "jdbc:mysql://localhost:3306/rahul";
-    private static final String USER = "root";
-    private static final String PASSWORD = "root";
+public class Member {private boolean valid = false;
+private AuthenticatedActions authenticatedActions;
 
-    // JDBC variable connection
-    private static Connection connection;
-    static Scanner sc = new Scanner(System.in);
+// JDBC URL, user name, and password of MySQL server
+private static final String URL = "jdbc:mysql://localhost:3306/rahul";
+private static final String USER = "root";
+private static final String PASSWORD = "root";
+
+// JDBC variables for opening, closing, and managing the connection
+private static Connection connection;
+
+static Scanner sc = new Scanner(System.in);
+
+//login to get the authenticated actions
+public void login(int adminId, String password) 
+{
+   PreparedStatement statement = null;
+   ResultSet resultSet = null;
+
+   try {
+       connection = DriverManager.getConnection(URL, USER, PASSWORD);
+
+       // SQL query to check if the admin_id and password match
+       String checkLoginSQL = "SELECT * FROM admin WHERE admin_id = ? AND password = ?";
+
+       statement = connection.prepareStatement(checkLoginSQL);
+       statement.setInt(1, adminId);  // Set the admin_id in the query
+       statement.setString(2, password);  // Set the password in the query
+
+       resultSet = statement.executeQuery();
+
+       // Check if a matching admin record is found
+       if (resultSet.next()) {
+           System.out.println("Login successful.");
+           valid = true;
+           authenticatedActions = new AuthenticatedActions(); // Enable access to restricted methods
+
+       } else {
+           System.out.println("Invalid admin ID or password.");
+       }
+
+   } catch (SQLException e) {
+       e.printStackTrace();
+   } finally {
+       try {
+           if (resultSet != null) {
+               resultSet.close();
+           }
+           if (statement != null) {
+               statement.close();
+           }
+           if (connection != null) {
+               connection.close();
+           }
+       } catch (SQLException e) {
+           e.printStackTrace();
+       }
+   }
+}
+
+// Method to get AuthenticatedActions instance if login was successful
+public AuthenticatedActions getAuthenticatedActions() {
+   if (valid) {
+       return authenticatedActions;
+   } else {
+       System.out.println("Access denied. Please login first.");
+       return null;
+   }
+}
+
+public void logout() {
+   authenticatedActions = null;
+}
+
+class AuthenticatedActions 
+{
+   private AuthenticatedActions() {} // making constructor private so that it cannot be instantiated
     
  // Add membership
-    public static void addMembership(String name, String email, String phone, String address, String password, int balance) {
+    public  void addMembership(String name, String email, String phone, String address, String password, int balance) {
         PreparedStatement statement = null;
 
         try {
@@ -70,7 +138,7 @@ public class Member {
 
 
     // methos to check if email exists
-    private static boolean isEmailExists(String email) {
+    private boolean isEmailExists(String email) {
         try {
             String emailCheckSQL = "SELECT * FROM members WHERE email = ?";
             PreparedStatement statement = connection.prepareStatement(emailCheckSQL);
@@ -84,7 +152,7 @@ public class Member {
     }
 
     // method to check if phone exists
-    private static boolean isPhoneExists(String phone) {
+    private boolean isPhoneExists(String phone) {
         try {
             String phoneCheckSQL = "SELECT * FROM members WHERE phone = ?";
             PreparedStatement statement = connection.prepareStatement(phoneCheckSQL);
@@ -100,7 +168,7 @@ public class Member {
     
     
     // Method to cancel membership
-    public static void cancelMembership(int memberId) {
+    public void cancelMembership(int memberId) {
         PreparedStatement statement = null;
 
         try {
@@ -139,7 +207,7 @@ public class Member {
     }
     
  // List all available books
-    public static void listAvailableBooks() {
+    public void listAvailableBooks() {
         try {
             // Establish the connection to the database
             connection = DriverManager.getConnection(URL, USER, PASSWORD);
@@ -216,7 +284,7 @@ public class Member {
     }
 
     // Search book by title
-    public static void searchBookByTitle(String searchTitle) {
+    public void searchBookByTitle(String searchTitle) {
         try {
             // Establish the connection to the database
             connection = DriverManager.getConnection(URL, USER, PASSWORD);
@@ -273,7 +341,7 @@ public class Member {
     }
 
     // Search book by author
-    public static void searchBookByAuthor(String searchAuthor) {
+    public void searchBookByAuthor(String searchAuthor) {
         try {
             // Establish the connection to the database
             connection = DriverManager.getConnection(URL, USER, PASSWORD);
@@ -346,7 +414,7 @@ public class Member {
     }
 
     // Search book by genre
-    public static void searchBookByGenre(String searchGenre) {
+    public void searchBookByGenre(String searchGenre) {
         try {
             // Establish the connection to the database
             connection = DriverManager.getConnection(URL, USER, PASSWORD);
@@ -420,7 +488,7 @@ public class Member {
     }
     
     //borrow book
-    public static void borrowBook(int bookId, int memberId) {
+    public void borrowBook(int bookId, int memberId) {
         PreparedStatement fetchStatement = null;
         PreparedStatement availabilityStatement = null;
         PreparedStatement updateStatement = null;
@@ -513,7 +581,7 @@ public class Member {
 
 
    // return book
-    public static void returnBook(int copyId, int memberId) {
+    public void returnBook(int copyId, int memberId) {
         PreparedStatement returnStatement = null;
         PreparedStatement fetchLoanHistoryStatement = null;
         PreparedStatement historyStatement = null;
@@ -614,7 +682,7 @@ public class Member {
 
     
     // renew book
-    public static void renewBook(int copyId, int memberId) {
+    public void renewBook(int copyId, int memberId) {
     
         PreparedStatement fetchStatement = null;
         PreparedStatement renewStatement = null;
@@ -714,7 +782,7 @@ public class Member {
     }
     
  // Method to display member details by member_id
-    public static void displayMemberById(int memberId) {
+    public void displayMemberById(int memberId) {
         try {
 
             connection = DriverManager.getConnection(URL, USER, PASSWORD);
@@ -779,7 +847,7 @@ public class Member {
     }
 
     // update name
-    public static void updateName(int memberId, String newName)
+    public void updateName(int memberId, String newName)
     {
     	PreparedStatement updateNameStatement = null;
     	try {
@@ -814,7 +882,7 @@ public class Member {
     }
     
     // update email
-    public static void updateEmail(int memberId, String newEmail)
+    public void updateEmail(int memberId, String newEmail)
     {
     	PreparedStatement updateEmailStatement = null;
     	try {
@@ -849,7 +917,7 @@ public class Member {
     }
     
     // update phone
-    public static void updatePhone(int memberId, String newPhone)
+    public void updatePhone(int memberId, String newPhone)
     {
     	PreparedStatement updatePhoneStatement = null;
     	try {
@@ -884,7 +952,7 @@ public class Member {
     }
     
     //update address
-    public static void updateAddress(int memberId, String newAddress) {
+    public void updateAddress(int memberId, String newAddress) {
         PreparedStatement updateAddressStatement = null;
         try {
             connection = DriverManager.getConnection(URL, USER, PASSWORD);
@@ -917,7 +985,7 @@ public class Member {
     }
 
     //change password
-    public static void changePassword(int memberId, String newPassword) {
+    public void changePassword(int memberId, String newPassword) {
         PreparedStatement changePasswordStatement = null;
         try {
             connection = DriverManager.getConnection(URL, USER, PASSWORD);
@@ -950,7 +1018,7 @@ public class Member {
     }
     
     // add balance
-    public static void addBalance(int memberId, int newBalance)
+    public void addBalance(int memberId, int newBalance)
     {
     	ResultSet resultSet =null;
     	PreparedStatement balanceStatement = null;
@@ -1001,7 +1069,7 @@ public class Member {
     }
     
     // view loan history
-    public static void viewLoanHistory(int memberId) {
+    public void viewLoanHistory(int memberId) {
         PreparedStatement loanHistoryStatement = null;
         ResultSet resultSet = null;
 
@@ -1078,6 +1146,6 @@ public class Member {
         }
     }
 
-
+}
     
 }
