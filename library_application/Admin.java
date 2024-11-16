@@ -92,7 +92,7 @@ public class Admin
 	           // Start a transaction to ensure both insertions happen together
 	           connection.setAutoCommit(false);
 
-	           // 1. Check if the book already exists in the Books table
+	           // Check if the book already exists in the Books table
 	           String checkBookSQL = "SELECT book_id, total_copies FROM Books WHERE title = ? AND author = ?";
 	           PreparedStatement checkBookStatement = connection.prepareStatement(checkBookSQL);
 	           checkBookStatement.setString(1, title);
@@ -113,7 +113,7 @@ public class Admin
 	               int rowsAffected = updateBookStatement.executeUpdate();
 
 	               if (rowsAffected > 0) {
-	                   // 2. Insert additional copies in the Copies table
+	                   //Insert additional copies in the Copies table
 	                   String insertCopySQL = "INSERT INTO Copies (book_id, availability_status) VALUES (?, ?)";
 	                   PreparedStatement copyStatement = connection.prepareStatement(insertCopySQL);
 
@@ -128,7 +128,7 @@ public class Admin
 	                   copyStatement.executeBatch();
 	                   connection.commit(); // Commit the transaction
 
-	                   System.out.println("Copies added successfully! Total copies: " + newTotalCopies);
+	                   System.out.println("Book was present before so added the new copies. Total copies: " + newTotalCopies);
 	               } else {
 	                   System.out.println("Failed to update the book.");
 	                   connection.rollback(); // Rollback if update fails
@@ -165,7 +165,7 @@ public class Admin
 	                       copyStatement.executeBatch();
 	                       connection.commit(); // Commit the transaction
 
-	                       System.out.println("Book and copies added successfully!");
+	                       System.out.println("Book and copies added successfully. Book Id : "+bookId);
 	                   }
 	               } else {
 	                   System.out.println("Failed to add the book.");
@@ -194,7 +194,7 @@ public class Admin
 	   }
 
 	   // delete book method
-	   public void deleteBook(int book_id, String title) {
+	   public void deleteBook(int book_id) {
 	       Connection connection = null;
 	       try {
 	           // Establish the connection to the database
@@ -203,7 +203,7 @@ public class Admin
 	           // Start a transaction to ensure both delete operations happen together
 	           connection.setAutoCommit(false);
 
-	           // 1. Delete data from the Copies table
+	           // Delete data from the Copies table
 	           String deleteCopySQL = "DELETE FROM Copies WHERE book_id = ?";
 	           PreparedStatement copyStatement = connection.prepareStatement(deleteCopySQL);
 	           copyStatement.setInt(1, book_id);
@@ -211,11 +211,10 @@ public class Admin
 	           int rowsAffected = copyStatement.executeUpdate();
 
 	           if (rowsAffected >= 0) {
-	               // 2. Delete data from the Books table
-	               String deleteBookSQL = "DELETE FROM Books WHERE book_id = ? AND title = ?";
+	               //Delete data from the Books table
+	               String deleteBookSQL = "DELETE FROM Books WHERE book_id = ?";
 	               PreparedStatement bookStatement = connection.prepareStatement(deleteBookSQL);
 	               bookStatement.setInt(1, book_id);
-	               bookStatement.setString(2, title);
 
 	               rowsAffected = bookStatement.executeUpdate();
 
@@ -821,36 +820,72 @@ public class Admin
 	        }
 	    }
 
-	    // delete copy by its id
 	    public void deleteCopy(int copyId) {
+	        PreparedStatement deleteStatement = null;
+	        PreparedStatement updateBookStatement = null;
+	        PreparedStatement fetchBookIdStatement = null;
+	        ResultSet resultSet = null;
+
 	        try {
 	            // Establish the connection to the database
 	            connection = DriverManager.getConnection(URL, USER, PASSWORD);
+	            connection.setAutoCommit(false); // Begin transaction
 
-	            // Prepare SQL to delete a specific copy
+	            // Fetch the book_id associated with the copy
+	            String fetchBookIdSQL = "SELECT book_id FROM copies WHERE copy_id = ?";
+	            fetchBookIdStatement = connection.prepareStatement(fetchBookIdSQL);
+	            fetchBookIdStatement.setInt(1, copyId);
+	            resultSet = fetchBookIdStatement.executeQuery();
+
+	            if (!resultSet.next()) {
+	                System.out.println("No copy found with Copy ID: " + copyId);
+	                return; // Exit if the copy does not exist
+	            }
+
+	            int bookId = resultSet.getInt("book_id");
+
+	            // Delete the copy
 	            String deleteCopySQL = "DELETE FROM copies WHERE copy_id = ?";
-	            PreparedStatement deleteStatement = connection.prepareStatement(deleteCopySQL);
-	            deleteStatement.setInt(1, copyId); // Set the copy_id of the copy to be deleted
-
+	            deleteStatement = connection.prepareStatement(deleteCopySQL);
+	            deleteStatement.setInt(1, copyId);
 	            int rowsAffected = deleteStatement.executeUpdate();
+
 	            if (rowsAffected > 0) {
-	                System.out.println("Copy with Copy ID: " + copyId + " deleted successfully.");
+	                // Update the total copies in the books table
+	                String updateBookSQL = "UPDATE books SET total_copies = total_copies - 1 WHERE book_id = ?";
+	                updateBookStatement = connection.prepareStatement(updateBookSQL);
+	                updateBookStatement.setInt(1, bookId);
+	                updateBookStatement.executeUpdate();
+
+	                System.out.println("Copy with Copy ID: " + copyId + " deleted successfully. Total copies updated for Book ID: " + bookId);
 	            } else {
 	                System.out.println("No copy found with Copy ID: " + copyId);
 	            }
 
+	            connection.commit(); // Commit the transaction
 	        } catch (SQLException e) {
 	            e.printStackTrace();
-	        } finally {
 	            try {
 	                if (connection != null) {
-	                    connection.close(); // Close the connection
+	                    connection.rollback(); // Rollback the transaction in case of an error
 	                }
-	            } catch (SQLException e) {
-	                e.printStackTrace();
+	            } catch (SQLException rollbackException) {
+	                rollbackException.printStackTrace();
+	            }
+	        } finally {
+	            // Close resources
+	            try {
+	                if (resultSet != null) resultSet.close();
+	                if (fetchBookIdStatement != null) fetchBookIdStatement.close();
+	                if (deleteStatement != null) deleteStatement.close();
+	                if (updateBookStatement != null) updateBookStatement.close();
+	                if (connection != null) connection.close();
+	            } catch (SQLException closeException) {
+	                closeException.printStackTrace();
 	            }
 	        }
 	    }
+
 
 	    
 	    //update copy status
@@ -1253,54 +1288,57 @@ public class Admin
 	    
 	    // Add member
 	    public void addMember(String name, String email, String phone, String address, String password, int balance) {
-	        Connection connection = null;
-	        PreparedStatement statement = null;
+	    	PreparedStatement statement = null;
 
-	        try {
-	            connection = DriverManager.getConnection(URL, USER, PASSWORD);
+		    try {
+		        connection = DriverManager.getConnection(URL, USER, PASSWORD);
 
-	            if (isEmailExists(email)) {
-	                System.out.println("Error: Same email already exists.");
-	                return;
-	            }
+		        // Check if email already exists
+		        if (isEmailExists(email)) {
+		            System.out.println("Error: Same email already exists.");
+		            return;
+		        }
 
-	            if (isPhoneExists(phone)) {
-	                System.out.println("Error: Same phone number already exists.");
-	                return;
-	            }
+		        // Check if phone already exists
+		        if (isPhoneExists(phone)) {
+		            System.out.println("Error: Same phone number already exists.");
+		            return;
+		        }
 
-	            // SQL query to insert a new member 
-	            String insertMemberSQL = "INSERT INTO members (name, email, phone, address, password, balance) VALUES (?, ?, ?, ?, ?, ?)";
-	            statement = connection.prepareStatement(insertMemberSQL, Statement.RETURN_GENERATED_KEYS);
-	            statement.setString(1, name);
-	            statement.setString(2, email);
-	            statement.setString(3, phone);
-	            statement.setString(4, address);
-	            statement.setString(5, password);
-	            statement.setInt(6, balance); 
+		        // SQL query to insert a new member
+		        String insertMemberSQL = "INSERT INTO members (name, email, phone, address, password, balance) VALUES (?, ?, ?, ?, ?, ?)";
+		        statement = connection.prepareStatement(insertMemberSQL, Statement.RETURN_GENERATED_KEYS);
+		        statement.setString(1, name);
+		        statement.setString(2, email);
+		        statement.setString(3, phone);
+		        statement.setString(4, address);
+		        statement.setString(5, password);
+		        statement.setInt(6, balance);
 
-	            int rowsAffected = statement.executeUpdate();
+		        int rowsAffected = statement.executeUpdate();
 
-	            if (rowsAffected > 0) {
-	                ResultSet generatedKeys = statement.getGeneratedKeys();
-	                if (generatedKeys.next()) {
-	                    int memberId = generatedKeys.getInt(1);
-	                    System.out.println("Member added successfully! Your Member ID is: " + memberId);
-	                }
-	            } else {
-	                System.out.println("Failed to add member.");
-	            }
-	        } catch (SQLException e) {
-	            e.printStackTrace();
-	        } finally {
-	            // Close resources
-	            try {
-	                if (statement != null) statement.close();
-	                if (connection != null) connection.close();
-	            } catch (SQLException e) {
-	                e.printStackTrace();
-	            }
-	        }
+		        // If insertion is successful, retrieve and display member ID
+		        if (rowsAffected > 0) {
+		            ResultSet generatedKeys = statement.getGeneratedKeys();
+		            if (generatedKeys.next()) {
+		                int memberId = generatedKeys.getInt(1);
+		                System.out.println("Membership successfully created.");
+		                System.out.println("Your Member ID is: " + memberId);
+		            }
+		        } else {
+		            System.out.println("Failed to add member.");
+		        }
+		    } catch (SQLException e) {
+		        e.printStackTrace();
+		    } finally {
+		        // Close resources
+		        try {
+		            if (statement != null) statement.close();
+		            if (connection != null) connection.close();
+		        } catch (SQLException e) {
+		            e.printStackTrace();
+		        }
+		    }
 	    }
 
 
@@ -1336,19 +1374,62 @@ public class Admin
 	    
 	    // Method to delete a member by member_id
 	    public void deleteMember(int memberId) {
-	        PreparedStatement statement = null;
+	        PreparedStatement fetchLoanStatement = null;
+	        PreparedStatement updateCopyStatusStatement = null;
+	        PreparedStatement updateBookStatement = null;
+	        PreparedStatement deleteMemberStatement = null;
+	        ResultSet resultSet = null;
 
 	        try {
 	            // Establish the connection to the database
 	            connection = DriverManager.getConnection(URL, USER, PASSWORD);
+	            connection.setAutoCommit(false);  // Begin transaction
 
-	            // SQL query to delete a member by member_id
-	            String deleteSQL = "DELETE FROM members WHERE member_id = ?";
-	            statement = connection.prepareStatement(deleteSQL);
-	            statement.setInt(1, memberId);  // Set the member_id to the given value
+	            // Fetch the books borrowed by the member
+	            String fetchLoanSQL = "SELECT loanhistory.copy_id, loanhistory.status, copies.book_id " +
+	                      "FROM loanhistory " +
+	                      "JOIN copies ON loanhistory.copy_id = copies.copy_id " +
+	                      "WHERE loanhistory.member_id = ? AND loanhistory.status = 'borrowed'";
 
-	            // Execute the delete operation
-	            int rowsAffected = statement.executeUpdate();
+	            fetchLoanStatement = connection.prepareStatement(fetchLoanSQL);
+	            fetchLoanStatement.setInt(1, memberId);
+	            resultSet = fetchLoanStatement.executeQuery();
+
+	            // If the member has borrowed books
+	            if (resultSet.next()) {
+	                do {
+	                    int copyId = resultSet.getInt("copy_id");
+	                    int bookId = resultSet.getInt("book_id");
+
+	                    // Update the status of the copy to 'lost'
+	                    String updateCopyStatusSQL = "UPDATE copies SET availability_status = 'lost' WHERE copy_id = ?";
+	                    updateCopyStatusStatement = connection.prepareStatement(updateCopyStatusSQL);
+	                    updateCopyStatusStatement.setInt(1, copyId);
+	                    updateCopyStatusStatement.executeUpdate();
+
+	                    // Deduct the total copies in the books table
+	                    String updateBookSQL = "UPDATE books SET total_copies = total_copies - 1 WHERE book_id = ?";
+	                    updateBookStatement = connection.prepareStatement(updateBookSQL);
+	                    updateBookStatement.setInt(1, bookId);
+	                    updateBookStatement.executeUpdate();
+
+	                    // Update the loan history to 'lost' status
+	                    String updateLoanHistorySQL = "UPDATE loanhistory SET status = 'lost' WHERE copy_id = ?";
+	                    PreparedStatement updateLoanHistoryStatement = connection.prepareStatement(updateLoanHistorySQL);
+	                    updateLoanHistoryStatement.setInt(1, copyId);
+	                    updateLoanHistoryStatement.executeUpdate();
+
+	                    System.out.println("Book with Copy ID: " + copyId + " marked as lost.");
+	                } while (resultSet.next());
+	            } else {
+	                System.out.println("Member has no borrowed books to mark as lost.");
+	            }
+
+	            // Now delete the member
+	            String deleteMemberSQL = "DELETE FROM members WHERE member_id = ?";
+	            deleteMemberStatement = connection.prepareStatement(deleteMemberSQL);
+	            deleteMemberStatement.setInt(1, memberId);
+	            int rowsAffected = deleteMemberStatement.executeUpdate();
 
 	            if (rowsAffected > 0) {
 	                System.out.println("Member with ID " + memberId + " deleted successfully.");
@@ -1356,22 +1437,33 @@ public class Admin
 	                System.out.println("No member found with ID " + memberId + ".");
 	            }
 
+	            // Commit the transaction
+	            connection.commit();
+
 	        } catch (SQLException e) {
 	            e.printStackTrace();
+	            try {
+	                if (connection != null) {
+	                    connection.rollback();  // Rollback the transaction in case of error
+	                }
+	            } catch (SQLException rollbackException) {
+	                rollbackException.printStackTrace();
+	            }
 	        } finally {
 	            // Close the resources in the finally block to ensure they are always closed
 	            try {
-	                if (statement != null) {
-	                    statement.close(); // Close the PreparedStatement
-	                }
-	                if (connection != null) {
-	                    connection.close(); // Close the Connection
-	                }
-	            } catch (SQLException e) {
-	                e.printStackTrace();
+	                if (resultSet != null) resultSet.close();
+	                if (fetchLoanStatement != null) fetchLoanStatement.close();
+	                if (updateCopyStatusStatement != null) updateCopyStatusStatement.close();
+	                if (updateBookStatement != null) updateBookStatement.close();
+	                if (deleteMemberStatement != null) deleteMemberStatement.close();
+	                if (connection != null) connection.close();
+	            } catch (SQLException closeException) {
+	                closeException.printStackTrace();
 	            }
 	        }
 	    }
+
 	    
 	 // Method to display all members 
 	    public void displayAllMembers() {
@@ -1449,7 +1541,7 @@ public class Admin
 	    }
 
 	 // Method to display member details by member_id
-	    public void displayMemberById(int memberId) {
+	    public void searchMemberById(int memberId) {
 	        try {
 
 	            connection = DriverManager.getConnection(URL, USER, PASSWORD);
@@ -1556,6 +1648,13 @@ public class Admin
 	    	try {
 	    		connection = DriverManager.getConnection(URL, USER, PASSWORD);
 	    		
+	    		// check if email exists
+	    		if (isEmailExists(newEmail)) {
+		            System.out.println("Error: Same email already exists.");
+		            return;
+		        }
+
+	    		
 	    		//write sql query to update email
 	    		String updateEmailSql = "UPDATE MEMBERS SET email = ? WHERE member_id = ?";
 	    		updateEmailStatement = connection.prepareStatement(updateEmailSql);
@@ -1591,6 +1690,12 @@ public class Admin
 	    	try {
 	    		connection = DriverManager.getConnection(URL, USER, PASSWORD);
 	    		
+
+		        // Check if phone already exists
+		        if (isPhoneExists(newPhone)) {
+		            System.out.println("Error: Same phone number already exists.");
+		            return;
+		        }
 	    		//write sql query to update phone
 	    		String updatePhoneSql = "UPDATE MEMBERS SET phone = ? WHERE member_id = ?";
 	    		updatePhoneStatement = connection.prepareStatement(updatePhoneSql);
