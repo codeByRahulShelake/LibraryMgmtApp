@@ -16,6 +16,128 @@ public class Member {
     private static Connection connection;
     static Scanner sc = new Scanner(System.in);
     
+ // Add membership
+    public static void addMembership(String name, String email, String phone, String address, String password, int balance) {
+        PreparedStatement statement = null;
+
+        try {
+            connection = DriverManager.getConnection(URL, USER, PASSWORD);
+
+            if (isEmailExists(email)) {
+                System.out.println("Error: Same email already exists.");
+                return;
+            }
+
+            if (isPhoneExists(phone)) {
+                System.out.println("Error: Same phone number already exists.");
+                return;
+            }
+
+            // SQL query to insert a new member 
+            String insertMemberSQL = "INSERT INTO members (name, email, phone, address, password, balance) VALUES (?, ?, ?, ?, ?, ?)";
+            statement = connection.prepareStatement(insertMemberSQL, Statement.RETURN_GENERATED_KEYS);
+            statement.setString(1, name);
+            statement.setString(2, email);
+            statement.setString(3, phone);
+            statement.setString(4, address);
+            statement.setString(5, password);
+            statement.setInt(6, balance); 
+
+            int rowsAffected = statement.executeUpdate();
+
+            if (rowsAffected > 0) {
+                ResultSet generatedKeys = statement.getGeneratedKeys();
+                if (generatedKeys.next()) {
+                    int memberId = generatedKeys.getInt(1);
+                    System.out.println("You are a member now." );
+                    displayMemberById(memberId);
+                }
+            } else {
+                System.out.println("Failed to add member.");
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        } finally {
+            // Close resources
+            try {
+                if (statement != null) statement.close();
+                if (connection != null) connection.close();
+            } catch (SQLException e) {
+                e.printStackTrace();
+            }
+        }
+    }
+
+
+    // methos to check if email exists
+    private static boolean isEmailExists(String email) {
+        try {
+            String emailCheckSQL = "SELECT * FROM members WHERE email = ?";
+            PreparedStatement statement = connection.prepareStatement(emailCheckSQL);
+            statement.setString(1, email);
+            ResultSet resultSet = statement.executeQuery();
+            return resultSet.next();
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return false;
+        }
+    }
+
+    // method to check if phone exists
+    private static boolean isPhoneExists(String phone) {
+        try {
+            String phoneCheckSQL = "SELECT * FROM members WHERE phone = ?";
+            PreparedStatement statement = connection.prepareStatement(phoneCheckSQL);
+            statement.setString(1, phone);
+            ResultSet resultSet = statement.executeQuery();
+            return resultSet.next();
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return false;
+        }
+    }
+    
+    
+    
+    // Method to cancel membership
+    public static void cancelMembership(int memberId) {
+        PreparedStatement statement = null;
+
+        try {
+            // Establish the connection to the database
+            connection = DriverManager.getConnection(URL, USER, PASSWORD);
+
+            // SQL query to delete a member by member_id
+            String deleteSQL = "DELETE FROM members WHERE member_id = ?";
+            statement = connection.prepareStatement(deleteSQL);
+            statement.setInt(1, memberId);  // Set the member_id to the given value
+
+            // Execute the delete operation
+            int rowsAffected = statement.executeUpdate();
+
+            if (rowsAffected > 0) {
+                System.out.println("Membership cancel for Member with ID " + memberId);
+            } else {
+                System.out.println("No member found with ID " + memberId );
+            }
+
+        } catch (SQLException e) {
+            e.printStackTrace();
+        } finally {
+            
+            try {
+                if (statement != null) {
+                    statement.close(); // Close the PreparedStatement
+                }
+                if (connection != null) {
+                    connection.close(); // Close the Connection
+                }
+            } catch (SQLException e) {
+                e.printStackTrace();
+            }
+        }
+    }
+    
  // List all available books
     public static void listAvailableBooks() {
         try {
@@ -590,6 +712,71 @@ public class Member {
             }
         }
     }
+    
+ // Method to display member details by member_id
+    public static void displayMemberById(int memberId) {
+        try {
+
+            connection = DriverManager.getConnection(URL, USER, PASSWORD);
+
+            // Query to select a member by their ID
+            String selectMemberSQL = "SELECT * FROM Members WHERE member_id = ?";
+            PreparedStatement statement = connection.prepareStatement(selectMemberSQL);
+            statement.setInt(1, memberId);
+
+            ResultSet resultSet = statement.executeQuery();
+
+            // Display table header
+            System.out.println();
+            System.out.printf("%-10s %-20s %-30s %-15s %-20s %-15s %-15s%n", 
+                              "Member ID", "Name", "Email", "Phone", "Address", "Balance", "Password");
+            System.out.println("------------------------------------------------------------------------------------------------------------------------------------");
+
+            // Check if the result set has any records
+            if (!resultSet.isBeforeFirst()) {
+                System.out.println("No member found with ID: " + memberId);
+                return;
+            }
+
+            // Display the member details
+            if (resultSet.next()) {
+                int id = resultSet.getInt("member_id");
+                String name = resultSet.getString("name");
+                if (name.length() > 20) {
+                    name = name.substring(0, 17) + "...";  // Limit to 20 characters
+                }
+                String email = resultSet.getString("email");
+                if (email.length() > 30) {
+                    email = email.substring(0, 27) + "...";  // Limit to 30 characters
+                }
+                String phone = resultSet.getString("phone");
+                String address = resultSet.getString("address");
+                if (address.length() > 20) {
+                    address = address.substring(0, 17) + "...";  // Limit to 20 characters
+                }
+                double balance = resultSet.getDouble("balance");
+                String password = resultSet.getString("password");
+                if (password.length() > 15) {
+                    password = password.substring(0, 12) + "...";  // Limit to 15 characters
+                }
+
+                // Display member details in formatted table
+                System.out.printf("%-10d %-20s %-30s %-15s %-20s %-15.2f %-15s%n", 
+                                  id, name, email, phone, address, balance, password);
+            }
+
+        } catch (SQLException e) {
+            e.printStackTrace();
+        } finally {
+            try {
+                if (connection != null) {
+                    connection.close();
+                }
+            } catch (SQLException e) {
+                e.printStackTrace();
+            }
+        }
+    }
 
     // update name
     public static void updateName(int memberId, String newName)
@@ -889,5 +1076,8 @@ public class Member {
                 e.printStackTrace();
             }
         }
-    }    
+    }
+
+
+    
 }
