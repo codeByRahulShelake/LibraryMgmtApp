@@ -62,8 +62,8 @@ public class LibraryApp
 	            			System.out.println();
 	                        System.out.println("-----------------------------------------------------------------------------------------------");
 	                        System.out.println();
-	                        System.out.println("1 : Book | 2: Member | 3: Loan | "
-	                                            + "4: Exit \nSelect options from above to do related operations.");
+	                        System.out.println("1 : Book | 2: Member | 3: Loan | 4: Exit "
+	                                            + "\nSelect options from above to do related operations.");
 	                        try 
 		            		{
 		            			choice = sc.nextInt();
@@ -416,7 +416,7 @@ public class LibraryApp
 		            					System.out.println();
 		    	                        System.out.println("-----------------------------------------------------------------------------------------------");
 		    	                        System.out.println();
-		    	                        System.out.println("1 : Add member | 2: Delete member | 3: Display all member | 4: Search By id"
+		    	                        System.out.println("1 : Add member | 2: Delete member | 3: Display all member | 4: Search By id | "
 		    	                        					+ "5: Update | 6: Exit");
 		    	                        try 
 		    		            		{
@@ -490,9 +490,8 @@ public class LibraryApp
 		    	                        		{
 		    	                        			System.out.println();
 					    	                        System.out.println("-----------------------------------------------------------------------------------------------");
-					    	                        System.out.println("\nEnter what to update from following options :");
-					    	                        System.out.println("1 : Name | 2: Email | 3: Address | 4: Phone | 5: Add balance"
-					    	                        		+ "6: Exit");
+					    	                        System.out.println("\nEnter what to update from following options : ");
+					    	                        System.out.println("1 : Name | 2: Email | 3: Address | 4: Phone | 5: Add balance | 6: Exit");
 		    		    	                        try 
 		    		    		            		{
 		    		    		            			choice = sc.nextInt();
@@ -581,9 +580,10 @@ public class LibraryApp
 							    		            		{
 					    	                        			System.out.println("Enter member id : ");
 					    	                        			int memberId = sc.nextInt();
+					    	                        			System.out.println("Enter amount to add (less than 3000)");
+					    	                        			int newBalance = sc.nextInt();
 					    	                        			sc.nextLine();
-							    		            			int newBalance = returnBalance(sc);
-							    		            			
+					    	                        			
 							    		            			actions.addBalance(memberId, newBalance);
 							    		            			
 							    		            		}catch (InputMismatchException e) 
@@ -728,7 +728,8 @@ public class LibraryApp
                         			System.out.println("Enter password (i.e it is imp dont forget) : ");
                         			String password = sc.nextLine();
                         			int balance = returnBalance(sc);
-                        			sc.nextLine();
+                        			
+                        			
                         			memberObj.addMembership(name, email, phone, address, password, balance);
     		            		}catch (InputMismatchException e) 
     			                {
@@ -926,7 +927,7 @@ public class LibraryApp
 	    	        			                    System.out.println("-----------------------------------------------------------------------------------------------");
 	    	        			                    System.out.println();
 	    	        			                    System.out.println("1: Name | 2: Email  | 3: Phone | 4: Address"
-	    	        			                    		+ "5: Add balance | 6: Change password  | 7: Exit");
+	    	        			                    		+ "\n5: Add balance | 6: Change password  | 7: Exit");
 	    	        		                        choice = sc.nextInt();
 	    	        		                        sc.nextLine();
 	    	        		                    } catch (InputMismatchException e) 
@@ -952,7 +953,6 @@ public class LibraryApp
 	        	            		 				case 2: // email
 	        	            		 					try 
 	    	    	        		                    {
-	    	    	        		                    	System.out.println("Enter new email :");
 	    	    	        		                        String newEmail = returnEmailId(sc);
 	    	    	        		                        action.updateEmail(memberId, newEmail);
 	    	    	        		                    } catch (InputMismatchException e) 
@@ -964,7 +964,6 @@ public class LibraryApp
 	        	            		 				case 3: // phone
 	        	            		 					try 
 	    	    	        		                    {
-	    	    	        		                    	System.out.println("Enter new phone no :");
 	    	    	        		                        String newPhoneNo = String.valueOf(returnPhone(sc));
 	    	    	        		                        action.updatePhone(memberId, newPhoneNo);
 	    	    	        		                    } catch (InputMismatchException e) 
@@ -988,7 +987,8 @@ public class LibraryApp
 	        	            		 				case 5: // add balance
 	        	            		 					try 
 	    	    	        		                    {
-	    	    	        		                    	int balance = returnBalance(sc);
+	        	            		 						System.out.println("Enter amount to add (less than 3000):");
+	    	    	        		                    	int balance = sc.nextInt();
 	    	    	        		                    	action.addBalance(memberId, balance);
 	    	    	        		                    } catch (InputMismatchException e) 
 	    	    	        		                    {
@@ -1024,6 +1024,7 @@ public class LibraryApp
 
 	        	            		 	case 10 : // cancel membership
 	        	            		 		action.cancelMembership(memberId);
+	        	            		 		userActionFlag = false;
 	        	            		 		break;
 
 	        	            		 	case 11 :
@@ -1035,7 +1036,7 @@ public class LibraryApp
 	        	            		 } //action switch ends here
 	        	            		} // user action while loop ends here
 	        	            		 
-	        	            	}// member action is ends here
+	        	            	}// member action if ends here
 	                    		break; //log in case ends here
 	                    		
 	                    	case 3 : //exit
@@ -1051,6 +1052,7 @@ public class LibraryApp
 	            
 	            case 3 : // exit
 	            	mainFlag = false;
+	            	System.out.println("Exited succefully. \nThank you.");
 	            	break;
 	            
 	            default :
@@ -1071,7 +1073,7 @@ public class LibraryApp
                 balance = sc.nextInt();
                 sc.nextLine();
                 if(balance > 3000 || balance < 1000)
-                	System.out.println("Enter balance between 1000 to 3000:");
+                	System.out.println();
                 else
                 	balanceFlag = true;
             } catch (Exception e) 
