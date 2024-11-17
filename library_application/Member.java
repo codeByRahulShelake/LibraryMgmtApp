@@ -22,7 +22,7 @@ public class Member
 	static Scanner sc = new Scanner(System.in);
 	
 	//login to get the authenticated actions
-	public void login(int adminId, String password) 
+	public void login(int memberId, String memberPassword) 
 	{
 	   PreparedStatement statement = null;
 	   ResultSet resultSet = null;
@@ -31,11 +31,11 @@ public class Member
 	       connection = DriverManager.getConnection(URL, USER, PASSWORD);
 	
 	       // SQL query to check if the admin_id and password match
-	       String checkLoginSQL = "SELECT * FROM admin WHERE admin_id = ? AND password = ?";
+	       String checkLoginSQL = "SELECT * FROM members WHERE member_id = ? AND password = ? AND status = 'active'";
 	
 	       statement = connection.prepareStatement(checkLoginSQL);
-	       statement.setInt(1, adminId);  // Set the admin_id in the query
-	       statement.setString(2, password);  // Set the password in the query
+	       statement.setInt(1, memberId);  // Set the admin_id in the query
+	       statement.setString(2, memberPassword);  // Set the password in the query
 	
 	       resultSet = statement.executeQuery();
 	
@@ -70,23 +70,17 @@ public class Member
 	
 	// Method to get AuthenticatedActions instance if login was successful
 	public AuthenticatedActions getAuthenticatedActions() {
-	   if (valid) {
+	   if (valid)
 	       return authenticatedActions;
-	   } else {
-	       System.out.println("Access denied. Please login first.");
+	   else 
 	       return null;
-	   }
+	   
 	}
 	
 	public void logout() {
 	   authenticatedActions = null;
 	}
-	
-	class AuthenticatedActions 
-	{
-	   private AuthenticatedActions() {} // making constructor private so that it cannot be instantiated
-	    
-	 // Add membership
+	// Add membership
 	   public void addMembership(String name, String email, String phone, String address, String password, int balance) {
 		    PreparedStatement statement = null;
 
@@ -94,13 +88,13 @@ public class Member
 		        connection = DriverManager.getConnection(URL, USER, PASSWORD);
 
 		        // Check if email already exists
-		        if (isEmailExists(email)) {
+		        if (new AuthenticatedActions().isEmailExists(email)) {
 		            System.out.println("Error: Same email already exists.");
 		            return;
 		        }
 
 		        // Check if phone already exists
-		        if (isPhoneExists(phone)) {
+		        if (new AuthenticatedActions().isPhoneExists(phone)) {
 		            System.out.println("Error: Same phone number already exists.");
 		            return;
 		        }
@@ -123,7 +117,7 @@ public class Member
 		            if (generatedKeys.next()) {
 		                int memberId = generatedKeys.getInt(1);
 		                System.out.println("Membership successfully created.");
-		                displayMemberById(memberId); // Display full member details
+		                new AuthenticatedActions().displayMemberById(memberId); // Display full member details
 		            }
 		        } else {
 		            System.out.println("Failed to add member.");
@@ -140,10 +134,16 @@ public class Member
 		        }
 		    }
 		}
+	
+	class AuthenticatedActions 
+	{
+	   private AuthenticatedActions() {} // making constructor private so that it cannot be instantiated
+	    
+	 
 
 	
 	
-	    // methos to check if email exists
+	    // method to check if email exists
 	    private boolean isEmailExists(String email) {
 	        try {
 	            String emailCheckSQL = "SELECT * FROM members WHERE email = ?";
@@ -200,7 +200,7 @@ public class Member
 	            }
 
 	            // SQL query to delete the member by member_id
-	            String deleteSQL = "DELETE FROM members WHERE member_id = ?";
+	            String deleteSQL = "UPDATE members SET status = 'deactiveted' WHERE member_id = ?";
 	            deleteMemberStatement = connection.prepareStatement(deleteSQL);
 	            deleteMemberStatement.setInt(1, memberId);  // Set the member_id to the given value
 
@@ -567,7 +567,17 @@ public class Member
 	                    return; // Exit the method if active borrow limit is exceeded
 	                }
 	            }
+	            // check if book id is present
+	            String checkBookId = "SELECT book_id FROM books WHERE book_id = ?";
+	            availabilityStatement = connection.prepareStatement(checkBookId);
+	            availabilityStatement.setInt(1, bookId);
+	            resultSet = availabilityStatement.executeQuery();
 
+	            if (!resultSet.next()) { // No available book
+	                System.out.println("No book available with Book id : "+bookId);
+	                return;
+	            }
+	            
 	            // Check if the book is available
 	            String checkAvailabilitySQL = "SELECT c.copy_id FROM copies c " +
 	                                          "JOIN books b ON b.book_id = c.book_id " +
@@ -745,7 +755,8 @@ public class Member
 	            connection.setAutoCommit(false); // Start transaction
 	
 	            //Get the current expected return date
-	            String fetchLoanHistorySql = "SELECT expected_return_date FROM loanhistory WHERE copy_id = ? AND member_id = ? AND status = 'borrowed'";
+	            String fetchLoanHistorySql = "SELECT borrow_date, expected_return_date FROM loanhistory WHERE copy_id = ? AND member_id = ? AND status = 'borrowed'";
+
 	            fetchStatement = connection.prepareStatement(fetchLoanHistorySql);
 	            fetchStatement.setInt(1, copyId);
 	            fetchStatement.setInt(2, memberId);
@@ -758,7 +769,6 @@ public class Member
 	            }
 	
 	            Date expectedReturnDate = resultSet.getDate("expected_return_date");
-	            LocalDate borrowDate = resultSet.getDate("borrow_date").toLocalDate();
 	            LocalDate expectedReturnLocalDate = expectedReturnDate.toLocalDate();
 	            LocalDate today = LocalDate.now();
 	            long daysLate = ChronoUnit.DAYS.between(expectedReturnLocalDate, today);
@@ -793,12 +803,18 @@ public class Member
 	            }
 	
 	            // Calculate the new expected return date
-	            LocalDate newExpectedReturnDate = today.plusDays(7);
-	            long renewalDay = ChronoUnit.DAYS.between(newExpectedReturnDate, borrowDate);
-	            if(renewalDay > 30)
-	            {
-	            	System.out.println("You cannot have a book for more than 30 days");
+	            LocalDate borrowDate = resultSet.getDate("borrow_date").toLocalDate();
+	            LocalDate newExpectedReturnDate = today.plusDays(7); // New expected return date after renewal
+
+	            // Calculate the difference in days between the new expected return date and the borrow date
+	            long renewalDay = ChronoUnit.DAYS.between(borrowDate, newExpectedReturnDate);
+
+	            // Check if the renewal period exceeds 30 days
+	            if (renewalDay > 30) {
+	                System.out.println("You cannot have a book for more than 30 days. Please return it.");
+	                return;
 	            }
+
 	            // Update the expected return date in loanhistory
 	            String updateLoanHistorySql = "UPDATE loanhistory SET expected_return_date = ? WHERE copy_id = ? AND member_id = ? AND status = 'borrowed'";
 	            renewStatement = connection.prepareStatement(updateLoanHistorySql);
@@ -814,6 +830,7 @@ public class Member
 	            } else {
 	                System.out.println("Failed to renew the book. Please check the loan record.");
 	            }
+	            connection.commit();
 	
 	        } catch (SQLException e) {
 	            e.printStackTrace();

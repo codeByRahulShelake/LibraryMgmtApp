@@ -195,59 +195,46 @@ public class Admin
 
 	   // delete book method
 	   public void deleteBook(int book_id) {
-	       Connection connection = null;
-	       try {
-	           // Establish the connection to the database
-	           connection = DriverManager.getConnection(URL, USER, PASSWORD);
+		   try {
+		        // Establish the connection to the database
+		        connection = DriverManager.getConnection(URL, USER, PASSWORD);
 
-	           // Start a transaction to ensure both delete operations happen together
-	           connection.setAutoCommit(false);
+		        // Start a transaction to ensure atomicity
+		        connection.setAutoCommit(false);
 
-	           // Delete data from the Copies table
-	           String deleteCopySQL = "DELETE FROM Copies WHERE book_id = ?";
-	           PreparedStatement copyStatement = connection.prepareStatement(deleteCopySQL);
-	           copyStatement.setInt(1, book_id);
+		        // Update the Copies table to set availability_status to "archived"
+		        String updateCopiesSQL = "UPDATE Copies SET availability_status = 'archived' WHERE book_id = ?";
+		        PreparedStatement copyStatement = connection.prepareStatement(updateCopiesSQL);
+		        copyStatement.setInt(1, book_id);
 
-	           int rowsAffected = copyStatement.executeUpdate();
+		        int rowsAffected = copyStatement.executeUpdate();
 
-	           if (rowsAffected >= 0) {
-	               //Delete data from the Books table
-	               String deleteBookSQL = "DELETE FROM Books WHERE book_id = ?";
-	               PreparedStatement bookStatement = connection.prepareStatement(deleteBookSQL);
-	               bookStatement.setInt(1, book_id);
+		        if (rowsAffected > 0) {
+		            connection.commit(); // Commit the transaction
+		            System.out.println("All copies of the book have been archived successfully!");
+		        } else {
+		            System.out.println("No copies found for the given book ID.");
+		            connection.rollback(); // Rollback if no copies are updated
+		        }
 
-	               rowsAffected = bookStatement.executeUpdate();
-
-	               if (rowsAffected > 0) {
-	                   connection.commit(); // Commit the transaction
-	                   System.out.println("Book and its copies deleted successfully!");
-	               } else {
-	                   System.out.println("Failed to delete the book.");
-	                   connection.rollback(); // Rollback if the book delete fails
-	               }
-	           } else {
-	               System.out.println("Failed to delete copies.");
-	               connection.rollback(); // Rollback if the copies delete fails
-	           }
-
-	       } catch (SQLException e) {
-	           e.printStackTrace();
-	           try {
-	               if (connection != null) {
-	                   connection.rollback(); // Rollback the transaction in case of an error
-	               }
-	           } catch (SQLException ex) {
-	               ex.printStackTrace();
-	           }
-	       } finally {
-	           try {
-	               if (connection != null) {
-	                   connection.close(); // Close the connection
-	               }
-	           } catch (SQLException e) {
-	               e.printStackTrace();
-	           }
-	       }
+		    } catch (SQLException e) {
+		        e.printStackTrace();
+		        try {
+		            if (connection != null) {
+		                connection.rollback(); // Rollback the transaction in case of an error
+		            }
+		        } catch (SQLException ex) {
+		            ex.printStackTrace();
+		        }
+		    } finally {
+		        try {
+		            if (connection != null) {
+		                connection.close(); // Close the connection
+		            }
+		        } catch (SQLException e) {
+		            e.printStackTrace();
+		        }
+		    }
 	   }
 	   
 	    // Method to select and display all books from the database
@@ -320,6 +307,147 @@ public class Admin
 	            }
 	        }
 	    }
+	    
+	    // add copies
+	    public void addCopies(int bookId, int numberOfCopies) {
+	        PreparedStatement insertCopyStatement = null;
+	        PreparedStatement updateTotalCopiesStatement = null;
+
+	        try {
+	            // Establish the connection to the database
+	            connection = DriverManager.getConnection(URL, USER, PASSWORD);
+	            connection.setAutoCommit(false); // Start transaction
+
+	            // Prepare SQL for inserting copies
+	            String insertCopySQL = "INSERT INTO copies (book_id, availability_status) VALUES (?, ?)";
+	            insertCopyStatement = connection.prepareStatement(insertCopySQL);
+
+	            // Add the specified number of copies
+	            for (int i = 0; i < numberOfCopies; i++) {
+	                insertCopyStatement.setInt(1, bookId); // Set the book_id for each copy
+	                insertCopyStatement.setString(2, "available"); // Set initial availability status to 'available'
+	                insertCopyStatement.addBatch();
+	            }
+
+	            // Execute the batch insert
+	            insertCopyStatement.executeBatch();
+
+	            // Update the total copies for the book in the books table
+	            String updateTotalCopiesSQL = "UPDATE books SET total_copies = total_copies + ? WHERE book_id = ?";
+	            updateTotalCopiesStatement = connection.prepareStatement(updateTotalCopiesSQL);
+	            updateTotalCopiesStatement.setInt(1, numberOfCopies); // Increment the total copies by the specified number
+	            updateTotalCopiesStatement.setInt(2, bookId); // Specify the book_id for the update
+
+	            int rowsAffected = updateTotalCopiesStatement.executeUpdate();
+
+	            if (rowsAffected > 0) {
+	                connection.commit(); // Commit the transaction
+	                System.out.println(numberOfCopies + " copies added successfully for Book ID: " + bookId);
+	            } else {
+	                System.out.println("Failed to update total copies for Book ID: " + bookId);
+	                connection.rollback(); // Rollback if updating total copies fails
+	            }
+
+	        } catch (SQLException e) {
+	            e.printStackTrace();
+	            try {
+	                if (connection != null) {
+	                    connection.rollback(); // Rollback the transaction in case of an error
+	                }
+	            } catch (SQLException rollbackException) {
+	                rollbackException.printStackTrace();
+	            }
+	        } finally {
+	            // Close resources
+	            try {
+	                if (insertCopyStatement != null) insertCopyStatement.close();
+	                if (updateTotalCopiesStatement != null) updateTotalCopiesStatement.close();
+	                if (connection != null) connection.close();
+	            } catch (SQLException closeException) {
+	                closeException.printStackTrace();
+	            }
+	        }
+	    }
+
+
+	    // delete copy
+	    public void deleteCopy(int copyId) {
+	        PreparedStatement checkLoanStatement = null;
+	        PreparedStatement updateStatusStatement = null;
+	        PreparedStatement fetchBookIdStatement = null;
+	        ResultSet resultSet = null;
+
+	        try {
+	            // Establish the connection to the database
+	            connection = DriverManager.getConnection(URL, USER, PASSWORD);
+	            connection.setAutoCommit(false); // Begin transaction
+
+	            // Check if the copy is currently borrowed
+	            String checkLoanSQL = "SELECT COUNT(*) FROM loanhistory WHERE copy_id = ? AND status = 'borrowed'";
+	            checkLoanStatement = connection.prepareStatement(checkLoanSQL);
+	            checkLoanStatement.setInt(1, copyId);
+	            resultSet = checkLoanStatement.executeQuery();
+
+	            if (resultSet.next() && resultSet.getInt(1) > 0) {
+	                System.out.println("The copy is currently borrowed and cannot be archived.");
+	                return; // Exit if the copy is borrowed
+	            }
+
+	            // Fetch the book_id associated with the copy
+	            String fetchBookIdSQL = "SELECT book_id FROM copies WHERE copy_id = ?";
+	            fetchBookIdStatement = connection.prepareStatement(fetchBookIdSQL);
+	            fetchBookIdStatement.setInt(1, copyId);
+	            resultSet = fetchBookIdStatement.executeQuery();
+
+	            if (!resultSet.next()) {
+	                System.out.println("No copy found with Copy ID: " + copyId);
+	                return; // Exit if the copy does not exist
+	            }
+
+	            int bookId = resultSet.getInt("book_id");
+
+	            // Update the status of the copy to 'archived' in the copies table
+	            String updateStatusSQL = "UPDATE copies SET availability_status = 'archived' WHERE copy_id = ?";
+	            updateStatusStatement = connection.prepareStatement(updateStatusSQL);
+	            updateStatusStatement.setInt(1, copyId);
+	            int rowsAffected = updateStatusStatement.executeUpdate();
+
+	            if (rowsAffected > 0) {
+	                // Update the total copies in the books table
+	                String updateBookSQL = "UPDATE books SET total_copies = total_copies - 1 WHERE book_id = ?";
+	                PreparedStatement updateBookStatement = connection.prepareStatement(updateBookSQL);
+	                updateBookStatement.setInt(1, bookId);
+	                updateBookStatement.executeUpdate();
+
+	                System.out.println("Copy with Copy ID: " + copyId + " archived successfully. Total copies updated for Book ID: " + bookId);
+	            } else {
+	                System.out.println("No copy found with Copy ID: " + copyId);
+	            }
+
+	            connection.commit(); // Commit the transaction
+	        } catch (SQLException e) {
+	            e.printStackTrace();
+	            try {
+	                if (connection != null) {
+	                    connection.rollback(); // Rollback the transaction in case of an error
+	                }
+	            } catch (SQLException rollbackException) {
+	                rollbackException.printStackTrace();
+	            }
+	        } finally {
+	            // Close resources
+	            try {
+	                if (resultSet != null) resultSet.close();
+	                if (checkLoanStatement != null) checkLoanStatement.close();
+	                if (fetchBookIdStatement != null) fetchBookIdStatement.close();
+	                if (updateStatusStatement != null) updateStatusStatement.close();
+	                if (connection != null) connection.close();
+	            } catch (SQLException closeException) {
+	                closeException.printStackTrace();
+	            }
+	        }
+	    }
+
 	    
 	    // display all copies
 	    public void displayCopies(int book_id) {
@@ -478,13 +606,7 @@ public class Admin
 
 	            if (bookResultSet.next()) {
 	                // Display basic book details
-	            	System.out.println(
-	            		    "Book ID: " + bookResultSet.getInt("book_id")
-	            		    + " | Title: " + bookResultSet.getString("title")
-	            		    + " | Author: " + bookResultSet.getString("author")
-	            		    + " | Genre: " + bookResultSet.getString("genre")
-	            		    + " | Total Copies: " + bookResultSet.getInt("total_copies")
-	            		);
+	            	
 
 
 	              
@@ -498,9 +620,23 @@ public class Admin
 
 	                if (availabilityResultSet.next()) {
 	                    int availableCopies = availabilityResultSet.getInt("available_count");
-	                    System.out.printf("| Available Copies: %d", availableCopies);
+	                    System.out.println(
+		            		    "\nBook ID: " + bookResultSet.getInt("book_id")
+		            		    + " | Title: " + bookResultSet.getString("title")
+		            		    + " | Author: " + bookResultSet.getString("author")
+		            		    + " | Genre: " + bookResultSet.getString("genre")
+		            		    + " | Total Copies: " + bookResultSet.getInt("total_copies"
+		            		    + " | Available Copies: "+availableCopies)
+		            		);
 	                } else {
-	                    System.out.println("No copies available for this book.");
+	                	System.out.println(
+		            		    "\nBook ID: " + bookResultSet.getInt("book_id")
+		            		    + " | Title: " + bookResultSet.getString("title")
+		            		    + " | Author: " + bookResultSet.getString("author")
+		            		    + " | Genre: " + bookResultSet.getString("genre")
+		            		    + " | Total Copies: " + bookResultSet.getInt("total_copies"
+		            		    + " | Available Copies: 0")
+		            		);
 	                }
 
 	            } else {
@@ -803,105 +939,7 @@ public class Admin
 	        }
 	    }
 	    
-	    // add copies to existing book
-	    public void addCopies(int bookId, int numberOfCopies) {
-	        try {
-	            // Establish the connection to the database
-	            connection = DriverManager.getConnection(URL, USER, PASSWORD);
-
-	            // Prepare SQL for inserting copies
-	            String insertCopySQL = "INSERT INTO copies (book_id, availability_status) VALUES (?, ?)";
-	            PreparedStatement copyStatement = connection.prepareStatement(insertCopySQL);
-
-	            // Add the specified number of copies
-	            for (int i = 0; i < numberOfCopies; i++) {
-	                copyStatement.setInt(1, bookId); // Set the book_id for each copy
-	                copyStatement.setString(2, "available"); // Set initial availability status to 'available'
-	                copyStatement.addBatch();
-	            }
-
-	            // Execute the batch insert
-	            copyStatement.executeBatch();
-	            System.out.println(numberOfCopies + " copies added successfully for Book ID: " + bookId);
-
-	        } catch (SQLException e) {
-	            e.printStackTrace();
-	        } finally {
-	            try {
-	                if (connection != null) {
-	                    connection.close(); // Close the connection
-	                }
-	            } catch (SQLException e) {
-	                e.printStackTrace();
-	            }
-	        }
-	    }
-
-	    public void deleteCopy(int copyId) {
-	        PreparedStatement deleteStatement = null;
-	        PreparedStatement updateBookStatement = null;
-	        PreparedStatement fetchBookIdStatement = null;
-	        ResultSet resultSet = null;
-
-	        try {
-	            // Establish the connection to the database
-	            connection = DriverManager.getConnection(URL, USER, PASSWORD);
-	            connection.setAutoCommit(false); // Begin transaction
-
-	            // Fetch the book_id associated with the copy
-	            String fetchBookIdSQL = "SELECT book_id FROM copies WHERE copy_id = ?";
-	            fetchBookIdStatement = connection.prepareStatement(fetchBookIdSQL);
-	            fetchBookIdStatement.setInt(1, copyId);
-	            resultSet = fetchBookIdStatement.executeQuery();
-
-	            if (!resultSet.next()) {
-	                System.out.println("No copy found with Copy ID: " + copyId);
-	                return; // Exit if the copy does not exist
-	            }
-
-	            int bookId = resultSet.getInt("book_id");
-
-	            // Delete the copy
-	            String deleteCopySQL = "DELETE FROM copies WHERE copy_id = ?";
-	            deleteStatement = connection.prepareStatement(deleteCopySQL);
-	            deleteStatement.setInt(1, copyId);
-	            int rowsAffected = deleteStatement.executeUpdate();
-
-	            if (rowsAffected > 0) {
-	                // Update the total copies in the books table
-	                String updateBookSQL = "UPDATE books SET total_copies = total_copies - 1 WHERE book_id = ?";
-	                updateBookStatement = connection.prepareStatement(updateBookSQL);
-	                updateBookStatement.setInt(1, bookId);
-	                updateBookStatement.executeUpdate();
-
-	                System.out.println("Copy with Copy ID: " + copyId + " deleted successfully. Total copies updated for Book ID: " + bookId);
-	            } else {
-	                System.out.println("No copy found with Copy ID: " + copyId);
-	            }
-
-	            connection.commit(); // Commit the transaction
-	        } catch (SQLException e) {
-	            e.printStackTrace();
-	            try {
-	                if (connection != null) {
-	                    connection.rollback(); // Rollback the transaction in case of an error
-	                }
-	            } catch (SQLException rollbackException) {
-	                rollbackException.printStackTrace();
-	            }
-	        } finally {
-	            // Close resources
-	            try {
-	                if (resultSet != null) resultSet.close();
-	                if (fetchBookIdStatement != null) fetchBookIdStatement.close();
-	                if (deleteStatement != null) deleteStatement.close();
-	                if (updateBookStatement != null) updateBookStatement.close();
-	                if (connection != null) connection.close();
-	            } catch (SQLException closeException) {
-	                closeException.printStackTrace();
-	            }
-	        }
-	    }
+	    
 
 
 	    
@@ -1159,7 +1197,7 @@ public class Admin
 	            // Display total borrowed books count
 	            if (resultSet.next()) {
 	                int totalBorrowed = resultSet.getInt("total_borrowed");
-	                System.out.println("Total Books Borrowed (including returned): " + totalBorrowed);
+	                System.out.println("Total Books Loaned (including returned): " + totalBorrowed);
 	            }
 
 	        } catch (SQLException e) {
@@ -1383,94 +1421,66 @@ public class Admin
 	    
 	    // Method to delete a member by member_id
 	    public void deleteMember(int memberId) {
-	        PreparedStatement fetchLoanStatement = null;
-	        PreparedStatement updateCopyStatusStatement = null;
-	        PreparedStatement updateBookStatement = null;
-	        PreparedStatement deleteMemberStatement = null;
-	        ResultSet resultSet = null;
+	    	 PreparedStatement fetchBalanceStatement = null;
+		        PreparedStatement deleteMemberStatement = null;
+		        ResultSet resultSet = null;
 
-	        try {
-	            // Establish the connection to the database
-	            connection = DriverManager.getConnection(URL, USER, PASSWORD);
-	            connection.setAutoCommit(false);  // Begin transaction
+		        try {
+		            // Establish the connection to the database
+		            connection = DriverManager.getConnection(URL, USER, PASSWORD);
+		            connection.setAutoCommit(false); // Begin transaction
 
-	            // Fetch the books borrowed by the member
-	            String fetchLoanSQL = "SELECT loanhistory.copy_id, loanhistory.status, copies.book_id " +
-	                      "FROM loanhistory " +
-	                      "JOIN copies ON loanhistory.copy_id = copies.copy_id " +
-	                      "WHERE loanhistory.member_id = ? AND loanhistory.status = 'borrowed'";
+		            // Fetch the member's balance before deleting the member
+		            String fetchBalanceSQL = "SELECT balance FROM members WHERE member_id = ?";
+		            fetchBalanceStatement = connection.prepareStatement(fetchBalanceSQL);
+		            fetchBalanceStatement.setInt(1, memberId);  // Set the member_id to the given value
 
-	            fetchLoanStatement = connection.prepareStatement(fetchLoanSQL);
-	            fetchLoanStatement.setInt(1, memberId);
-	            resultSet = fetchLoanStatement.executeQuery();
+		            resultSet = fetchBalanceStatement.executeQuery();
 
-	            // If the member has borrowed books
-	            if (resultSet.next()) {
-	                do {
-	                    int copyId = resultSet.getInt("copy_id");
-	                    int bookId = resultSet.getInt("book_id");
+		            if (resultSet.next()) {
+		                int balance = resultSet.getInt("balance");
+		                System.out.println("Balance returned of Rs. " + balance);
+		            } else {
+		                System.out.println("No member found with ID " + memberId);
+		                return; // Exit if the member doesn't exist
+		            }
 
-	                    // Update the status of the copy to 'lost'
-	                    String updateCopyStatusSQL = "UPDATE copies SET availability_status = 'lost' WHERE copy_id = ?";
-	                    updateCopyStatusStatement = connection.prepareStatement(updateCopyStatusSQL);
-	                    updateCopyStatusStatement.setInt(1, copyId);
-	                    updateCopyStatusStatement.executeUpdate();
+		            // SQL query to delete the member by member_id
+		            String deleteSQL = "UPDATE members SET status = 'deactiveted' WHERE member_id = ?";
+		            deleteMemberStatement = connection.prepareStatement(deleteSQL);
+		            deleteMemberStatement.setInt(1, memberId);  // Set the member_id to the given value
 
-	                    // Deduct the total copies in the books table
-	                    String updateBookSQL = "UPDATE books SET total_copies = total_copies - 1 WHERE book_id = ?";
-	                    updateBookStatement = connection.prepareStatement(updateBookSQL);
-	                    updateBookStatement.setInt(1, bookId);
-	                    updateBookStatement.executeUpdate();
+		            // Execute the delete operation
+		            int rowsAffected = deleteMemberStatement.executeUpdate();
 
-	                    // Update the loan history to 'lost' status
-	                    String updateLoanHistorySQL = "UPDATE loanhistory SET status = 'lost' WHERE copy_id = ?";
-	                    PreparedStatement updateLoanHistoryStatement = connection.prepareStatement(updateLoanHistorySQL);
-	                    updateLoanHistoryStatement.setInt(1, copyId);
-	                    updateLoanHistoryStatement.executeUpdate();
+		            if (rowsAffected > 0) {
+		                System.out.println("Membership cancelled for Member with ID " + memberId);
+		            } else {
+		                System.out.println("No member found with ID " + memberId);
+		            }
 
-	                    System.out.println("Book with Copy ID: " + copyId + " marked as lost.");
-	                } while (resultSet.next());
-	            } else {
-	                System.out.println("Member has no borrowed books to mark as lost.");
-	            }
+		            connection.commit(); // Commit the transaction
 
-	            // Now delete the member
-	            String deleteMemberSQL = "DELETE FROM members WHERE member_id = ?";
-	            deleteMemberStatement = connection.prepareStatement(deleteMemberSQL);
-	            deleteMemberStatement.setInt(1, memberId);
-	            int rowsAffected = deleteMemberStatement.executeUpdate();
-
-	            if (rowsAffected > 0) {
-	                System.out.println("Member with ID " + memberId + " deleted successfully.");
-	            } else {
-	                System.out.println("No member found with ID " + memberId + ".");
-	            }
-
-	            // Commit the transaction
-	            connection.commit();
-
-	        } catch (SQLException e) {
-	            e.printStackTrace();
-	            try {
-	                if (connection != null) {
-	                    connection.rollback();  // Rollback the transaction in case of error
-	                }
-	            } catch (SQLException rollbackException) {
-	                rollbackException.printStackTrace();
-	            }
-	        } finally {
-	            // Close the resources in the finally block to ensure they are always closed
-	            try {
-	                if (resultSet != null) resultSet.close();
-	                if (fetchLoanStatement != null) fetchLoanStatement.close();
-	                if (updateCopyStatusStatement != null) updateCopyStatusStatement.close();
-	                if (updateBookStatement != null) updateBookStatement.close();
-	                if (deleteMemberStatement != null) deleteMemberStatement.close();
-	                if (connection != null) connection.close();
-	            } catch (SQLException closeException) {
-	                closeException.printStackTrace();
-	            }
-	        }
+		        } catch (SQLException e) {
+		            e.printStackTrace();
+		            try {
+		                if (connection != null) {
+		                    connection.rollback(); // Rollback in case of an error
+		                }
+		            } catch (SQLException rollbackException) {
+		                rollbackException.printStackTrace();
+		            }
+		        } finally {
+		            // Close resources
+		            try {
+		                if (resultSet != null) resultSet.close();
+		                if (fetchBalanceStatement != null) fetchBalanceStatement.close();
+		                if (deleteMemberStatement != null) deleteMemberStatement.close();
+		                if (connection != null) connection.close();
+		            } catch (SQLException closeException) {
+		                closeException.printStackTrace();
+		            }
+		        }
 	    }
 
 	    
