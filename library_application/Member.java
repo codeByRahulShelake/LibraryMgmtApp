@@ -2,9 +2,9 @@ package library_application;
 
 import java.sql.*;
 import java.sql.Date;
-import java.util.*;
 import java.time.*;
 import java.time.temporal.ChronoUnit;
+import java.util.*;
 
 public class Member 
 {
@@ -1276,7 +1276,7 @@ public class Member
 	            connection = DriverManager.getConnection(URL, USER, PASSWORD);
 	
 	            // query to fetch loan history for the member
-	            String loanHistorySql = "SELECT l.loan_id, c.copy_id, b.title, l.borrow_date, l.expected_return_date, l.return_date, l.status " +
+	            String loanHistorySql = "SELECT c.copy_id, b.title, l.borrow_date, l.expected_return_date, l.return_date, l.status " +
 	                                    "FROM loanhistory l " +
 	                                    "JOIN copies c ON l.copy_id = c.copy_id " +
 	                                    "JOIN books b ON c.book_id = b.book_id " +
@@ -1288,8 +1288,8 @@ public class Member
 	            resultSet = loanHistoryStatement.executeQuery();
 	
 	            // Display loan history
-	            System.out.printf("%-10s %-10s %-30s %-15s %-20s %-15s %-15s\n", 
-	                              "Loan ID", "Copy ID", "Book Title", "Borrow Date", "Due Date", "Return Date", "Status");
+	            System.out.printf("%-10s %-30s %-15s %-20s %-15s %-15s\n", 
+	                               "Copy ID", "Book Title", "Borrow Date", "Due Date", "Return Date", "Status");
 	            System.out.println("-------------------------------------------------------------------------------------------------------------");
 	
 	            boolean hasHistory = false;
@@ -1297,7 +1297,6 @@ public class Member
 	            while (resultSet.next()) {
 	            	recordCount++;
 	                hasHistory = true;
-	                int loanId = resultSet.getInt("loan_id");
 	                int copyId = resultSet.getInt("copy_id");
 	                String title = resultSet.getString("title");
 	                if(title.length() > 30) {
@@ -1308,8 +1307,8 @@ public class Member
 	                Date returnDate = resultSet.getDate("return_date");
 	                String status = resultSet.getString("status");
 	
-	                System.out.printf("%-10d %-10d %-30s %-15s %-20s %-15s %-15s\n", 
-	                                  loanId, copyId, title, borrowDate, dueDate, 
+	                System.out.printf("%-10d %-30s %-15s %-20s %-15s %-15s\n", 
+	                                   copyId, title, borrowDate, dueDate, 
 	                                  (returnDate != null ? returnDate : "Not Returned"), status);
 	             // Check if 10 records have been displayed and there are more records left
 	                if (recordCount == 10 && !resultSet.isLast()) {
