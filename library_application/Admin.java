@@ -602,14 +602,8 @@ public class Admin
 	            PreparedStatement bookStatement = connection.prepareStatement(bookDetailsSQL);
 	            bookStatement.setInt(1, bookId);
 	            ResultSet bookResultSet = bookStatement.executeQuery();
-	            
 
 	            if (bookResultSet.next()) {
-	                // Display basic book details
-	            	
-
-
-	              
 	                // Query to count available copies for the specific book
 	                String availableCopiesSQL = "SELECT COUNT(*) AS available_count " +
 	                                            "FROM copies " +
@@ -621,24 +615,23 @@ public class Admin
 	                if (availabilityResultSet.next()) {
 	                    int availableCopies = availabilityResultSet.getInt("available_count");
 	                    System.out.println(
-		            		    "\nBook ID: " + bookResultSet.getInt("book_id")
-		            		    + " | Title: " + bookResultSet.getString("title")
-		            		    + " | Author: " + bookResultSet.getString("author")
-		            		    + " | Genre: " + bookResultSet.getString("genre")
-		            		    + " | Total Copies: " + bookResultSet.getInt("total_copies"
-		            		    + " | Available Copies: "+availableCopies)
-		            		);
+	                        "\nBook ID: " + bookResultSet.getInt("book_id")
+	                        + " | Title: " + bookResultSet.getString("title")
+	                        + " | Author: " + bookResultSet.getString("author")
+	                        + " | Genre: " + bookResultSet.getString("genre")
+	                        + " | Total Copies: " + bookResultSet.getInt("total_copies")
+	                        + " | Available Copies: " + availableCopies
+	                    );
 	                } else {
-	                	System.out.println(
-		            		    "\nBook ID: " + bookResultSet.getInt("book_id")
-		            		    + " | Title: " + bookResultSet.getString("title")
-		            		    + " | Author: " + bookResultSet.getString("author")
-		            		    + " | Genre: " + bookResultSet.getString("genre")
-		            		    + " | Total Copies: " + bookResultSet.getInt("total_copies"
-		            		    + " | Available Copies: 0")
-		            		);
+	                    System.out.println(
+	                        "\nBook ID: " + bookResultSet.getInt("book_id")
+	                        + " | Title: " + bookResultSet.getString("title")
+	                        + " | Author: " + bookResultSet.getString("author")
+	                        + " | Genre: " + bookResultSet.getString("genre")
+	                        + " | Total Copies: " + bookResultSet.getInt("total_copies")
+	                        + " | Available Copies: 0"
+	                    );
 	                }
-
 	            } else {
 	                System.out.println("No book found for the given Book ID: " + bookId);
 	            }
@@ -655,6 +648,7 @@ public class Admin
 	            }
 	        }
 	    }
+
 	    
 	    //search book by title
 	    public void searchBookByTitle(String searchTitle) {
@@ -1446,7 +1440,7 @@ public class Admin
 		            }
 
 		            // SQL query to delete the member by member_id
-		            String deleteSQL = "UPDATE members SET status = 'deactiveted' WHERE member_id = ?";
+		            String deleteSQL = "UPDATE members SET status = 'inactive' WHERE member_id = ?";
 		            deleteMemberStatement = connection.prepareStatement(deleteSQL);
 		            deleteMemberStatement.setInt(1, memberId);  // Set the member_id to the given value
 
@@ -1497,7 +1491,7 @@ public class Admin
 	            // Display table header
 	            System.out.println();
 	            System.out.printf("%-10s %-20s %-30s %-15s %-20s %-15s %-15s%n", 
-	                              "Member ID", "Name", "Email", "Phone", "Address", "Balance", "Password");
+	                              "Member ID", "Name", "Email", "Phone", "Address", "Balance", "Status");
 	            System.out.println("------------------------------------------------------------------------------------------------------------------------------------");
 
 	            if (!resultSet.isBeforeFirst()) {
@@ -1525,13 +1519,11 @@ public class Admin
 	                    address = address.substring(0, 17) + "...";  // Limit to 20 characters
 	                }
 	                double balance = resultSet.getDouble("balance");
-	                String password = resultSet.getString("password");
-	                if (password.length() > 15) {
-	                    password = password.substring(0, 12) + "...";  // Limit to 15 characters
-	                }
+	                String status = resultSet.getString("status");
+	               
 
 	                System.out.printf("%-10d %-20s %-30s %-15s %-20s %-15.2f %-15s%n", 
-	                                  memberId, name, email, phone, address, balance, password);
+	                                  memberId, name, email, phone, address, balance, status);
 
 	                // Check if 10 records have been displayed and there are more records left
 	                if (recordCount == 10 && !resultSet.isLast()) {
@@ -1575,7 +1567,7 @@ public class Admin
 	            // Display table header
 	            System.out.println();
 	            System.out.printf("%-10s %-20s %-30s %-15s %-20s %-15s %-15s%n", 
-	                              "Member ID", "Name", "Email", "Phone", "Address", "Balance", "Password");
+	                              "Member ID", "Name", "Email", "Phone", "Address", "Balance", "Status");
 	            System.out.println("------------------------------------------------------------------------------------------------------------------------------------");
 
 	            // Check if the result set has any records
@@ -1601,14 +1593,12 @@ public class Admin
 	                    address = address.substring(0, 17) + "...";  // Limit to 20 characters
 	                }
 	                double balance = resultSet.getDouble("balance");
-	                String password = resultSet.getString("password");
-	                if (password.length() > 15) {
-	                    password = password.substring(0, 12) + "...";  // Limit to 15 characters
-	                }
+	                String status = resultSet.getString("status");
+	                
 
 	                // Display member details in formatted table
 	                System.out.printf("%-10d %-20s %-30s %-15s %-20s %-15.2f %-15s%n", 
-	                                  id, name, email, phone, address, balance, password);
+	                                  id, name, email, phone, address, balance, status);
 	            }
 
 	        } catch (SQLException e) {

@@ -1052,6 +1052,7 @@ public class LibraryApp
 	            
 	            case 3 : // exit
 	            	mainFlag = false;
+					
 	            	System.out.println("Exited succefully. \nThank you.");
 	            	break;
 	            
